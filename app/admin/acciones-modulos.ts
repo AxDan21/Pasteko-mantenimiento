@@ -4,10 +4,12 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { sumarMeses } from "@/lib/panel";
+import { filasDesdePlantilla, type FilaGantt } from "@/lib/gantt";
 
 const txt = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const num = (f: FormData, k: string) => Number(f.get(k) ?? 0) || 0;
-const opcNum = (f: FormData, k: string) => (txt(f, k) ? Number(txt(f, k)) : null);
+const opcNum = (f: FormData, k: string) =>
+  txt(f, k) ? Number(txt(f, k)) : null;
 const opcTxt = (f: FormData, k: string) => txt(f, k) || null;
 
 async function db() {
@@ -16,12 +18,20 @@ async function db() {
 }
 
 /** Sube el archivo del campo "factura" al bucket privado y devuelve su ruta, o null si no hay archivo. */
-async function subirFactura(supabase: Awaited<ReturnType<typeof createClient>>, f: FormData, carpeta: string) {
+async function subirFactura(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  f: FormData,
+  carpeta: string,
+) {
   const file = f.get("factura");
   if (!(file instanceof File) || file.size === 0) return null;
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const ext = (file.name.split(".").pop() || "jpg")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
   const ruta = `${carpeta}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const { error } = await supabase.storage.from("facturas").upload(ruta, file, { contentType: file.type || undefined });
+  const { error } = await supabase.storage
+    .from("facturas")
+    .upload(ruta, file, { contentType: file.type || undefined });
   if (error) throw new Error(`No se pudo subir la factura: ${error.message}`);
   return ruta;
 }
@@ -51,15 +61,22 @@ export async function crearPreventivos(f: FormData) {
     proveedor_id: opcNum(f, "proveedor_id"),
     notas: opcTxt(f, "notas"),
   };
-  if (!fecha || !base.sucursal_id || !base.equipo || !base.tarea) redirect("/admin/preventivos?error=datos");
+  if (!fecha || !base.sucursal_id || !base.equipo || !base.tarea)
+    redirect("/admin/preventivos?error=datos");
   const [y, m, d] = fecha.split("-");
   const filas = Array.from({ length: veces }, (_, i) => {
     const mes = sumarMeses(`${y}-${m}`, i * repetir);
-    const ultimo = new Date(Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0)).getUTCDate();
-    return { ...base, fecha: `${mes}-${String(Math.min(Number(d), ultimo)).padStart(2, "0")}` };
+    const ultimo = new Date(
+      Date.UTC(Number(mes.slice(0, 4)), Number(mes.slice(5, 7)), 0),
+    ).getUTCDate();
+    return {
+      ...base,
+      fecha: `${mes}-${String(Math.min(Number(d), ultimo)).padStart(2, "0")}`,
+    };
   });
   const { error } = await supabase.from("preventivos").insert(filas);
-  if (error) redirect(`/admin/preventivos?error=${encodeURIComponent(error.message)}`);
+  if (error)
+    redirect(`/admin/preventivos?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/admin/preventivos");
   redirect(`/admin/preventivos?ok=${filas.length}`);
 }
@@ -85,7 +102,11 @@ export async function crearGasto(f: FormData) {
   const supabase = await db();
   let factura: string | null = null;
   try {
-    factura = await subirFactura(supabase, f, `gastos/${txt(f, "fecha").slice(0, 7)}`);
+    factura = await subirFactura(
+      supabase,
+      f,
+      `gastos/${txt(f, "fecha").slice(0, 7)}`,
+    );
   } catch (e) {
     redirect(`/admin/gastos?error=${encodeURIComponent((e as Error).message)}`);
   }
@@ -100,7 +121,8 @@ export async function crearGasto(f: FormData) {
     activo_id: opcTxt(f, "activo_id"),
     factura_path: factura,
   });
-  if (error) redirect(`/admin/gastos?error=${encodeURIComponent(error.message)}`);
+  if (error)
+    redirect(`/admin/gastos?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/admin", "layout");
   redirect(`/admin/gastos?mes=${txt(f, "fecha").slice(0, 7)}&ok=1`);
 }
@@ -114,11 +136,21 @@ export async function borrarGasto(f: FormData) {
 // ---------- Activos ----------
 export async function crearActivo(f: FormData) {
   const supabase = await db();
-  let id = txt(f, "id").toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  let id = txt(f, "id")
+    .toUpperCase()
+    .replace(/[^A-Z0-9-]/g, "");
   const equipo = txt(f, "equipo");
   if (!id) {
-    const pref = equipo.normalize("NFD").replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase() || "EQP";
-    const { count } = await supabase.from("activos").select("id", { count: "exact", head: true }).like("id", `PK-${pref}-%`);
+    const pref =
+      equipo
+        .normalize("NFD")
+        .replace(/[^A-Za-z]/g, "")
+        .slice(0, 3)
+        .toUpperCase() || "EQP";
+    const { count } = await supabase
+      .from("activos")
+      .select("id", { count: "exact", head: true })
+      .like("id", `PK-${pref}-%`);
     id = `PK-${pref}-${String((count ?? 0) + 1).padStart(3, "0")}`;
   }
   const { error } = await supabase.from("activos").insert({
@@ -134,7 +166,8 @@ export async function crearActivo(f: FormData) {
     vida_anios: num(f, "vida_anios") || 8,
     proveedor_id: opcNum(f, "proveedor_id"),
   });
-  if (error) redirect(`/admin/activos?error=${encodeURIComponent(error.message)}`);
+  if (error)
+    redirect(`/admin/activos?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/admin/activos");
   redirect(`/admin/activos?ok=${id}`);
 }
@@ -167,7 +200,11 @@ export async function crearMovCaja(f: FormData) {
   const supabase = await db();
   let factura: string | null = null;
   try {
-    factura = await subirFactura(supabase, f, `caja/${txt(f, "fecha").slice(0, 7)}`);
+    factura = await subirFactura(
+      supabase,
+      f,
+      `caja/${txt(f, "fecha").slice(0, 7)}`,
+    );
   } catch (e) {
     redirect(`/admin/caja?error=${encodeURIComponent((e as Error).message)}`);
   }
@@ -192,7 +229,11 @@ export async function adjuntarFacturaCaja(f: FormData) {
   } catch (e) {
     redirect(`/admin/caja?error=${encodeURIComponent((e as Error).message)}`);
   }
-  if (ruta) await supabase.from("caja_chica").update({ factura_path: ruta }).eq("id", id);
+  if (ruta)
+    await supabase
+      .from("caja_chica")
+      .update({ factura_path: ruta })
+      .eq("id", id);
   revalidatePath("/admin", "layout");
 }
 
@@ -244,7 +285,11 @@ export async function crearRefaccion(f: FormData) {
 export async function ajustarStock(f: FormData) {
   const supabase = await db();
   const id = num(f, "id");
-  const { data } = await supabase.from("refacciones").select("stock").eq("id", id).single();
+  const { data } = await supabase
+    .from("refacciones")
+    .select("stock")
+    .eq("id", id)
+    .single();
   const nuevo = Math.max(0, Number(data?.stock ?? 0) + num(f, "delta"));
   await supabase.from("refacciones").update({ stock: nuevo }).eq("id", id);
   revalidatePath("/admin/refacciones");
@@ -256,39 +301,107 @@ export async function borrarRefaccion(f: FormData) {
   revalidatePath("/admin/refacciones");
 }
 
-// ---------- Aperturas ----------
-const PLANTILLA: Record<string, string[]> = {
-  Instalaciones: ["Instalación eléctrica revisada y con tierra física", "Gas con prueba de hermeticidad", "Agua y drenaje probados", "Extracción y ducto funcionando"],
-  Equipos: ["Cafetera instalada y calibrada", "Horno instalado y probado", "Refrigeración en temperatura 24 h antes", "Vitrina caliente probada", "Aire acondicionado instalado"],
-  Registro: ["Equipos dados de alta en Activos", "Garantías y facturas registradas", "QR pegados en cada equipo", "Primer preventivo programado"],
-  Capacitación: ["Personal vio los videos de cada equipo", "Directorio de emergencia entregado"],
-};
-
+// ---------- Aperturas (Gantt) ----------
 export async function crearApertura(f: FormData) {
   const supabase = await db();
+  const fecha = txt(f, "fecha");
   const { data, error } = await supabase
     .from("aperturas")
-    .insert({ nombre: txt(f, "nombre"), fecha: txt(f, "fecha"), notas: opcTxt(f, "notas") })
+    .insert({
+      nombre: txt(f, "nombre"),
+      fecha,
+      tipo: txt(f, "tipo") === "Propia" ? "Propia" : "Franquicia",
+      notas: opcTxt(f, "notas"),
+    })
     .select("id")
     .single();
-  if (error || !data) redirect(`/admin/aperturas?error=${encodeURIComponent(error?.message ?? "alta")}`);
-  let orden = 0;
-  const items = Object.entries(PLANTILLA).flatMap(([grupo, lista]) => lista.map((texto) => ({ apertura_id: data.id, grupo, texto, orden: orden++ })));
+  if (error || !data)
+    redirect(
+      `/admin/aperturas?error=${encodeURIComponent(error?.message ?? "alta")}`,
+    );
+  const items = filasDesdePlantilla(fecha).map((r, i) => ({
+    apertura_id: data.id,
+    grupo: "Gantt",
+    orden: i,
+    texto: r.actividad,
+    responsable: r.responsable,
+    fecha: r.fecha,
+    hito: r.hito,
+    hecho: false,
+  }));
   await supabase.from("apertura_items").insert(items);
   revalidatePath("/admin/aperturas");
   redirect(`/admin/aperturas?id=${data.id}`);
 }
 
+/** Guarda todo el Gantt de una apertura (encabezado y pasos) desde el editor. */
+export async function guardarGantt(datos: {
+  id: number;
+  nombre: string;
+  fecha: string;
+  tipo: string;
+  filas: FilaGantt[];
+}) {
+  const supabase = await db();
+  const fechaOk = (v: string | null) =>
+    v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null;
+  if (!datos.nombre.trim() || !fechaOk(datos.fecha))
+    return { ok: false, error: "Falta el nombre o la fecha de apertura." };
+  const filas = datos.filas.filter((r) => r.actividad.trim());
+  const { error: e1 } = await supabase
+    .from("aperturas")
+    .update({
+      nombre: datos.nombre.trim(),
+      fecha: datos.fecha,
+      tipo: datos.tipo === "Propia" ? "Propia" : "Franquicia",
+    })
+    .eq("id", datos.id);
+  if (e1) return { ok: false, error: e1.message };
+  const { error: e2 } = await supabase
+    .from("apertura_items")
+    .delete()
+    .eq("apertura_id", datos.id);
+  if (e2) return { ok: false, error: e2.message };
+  if (filas.length) {
+    const { error: e3 } = await supabase.from("apertura_items").insert(
+      filas.map((r, i) => ({
+        apertura_id: datos.id,
+        grupo: "Gantt",
+        orden: i,
+        texto: r.actividad.trim(),
+        responsable: r.responsable.trim() || null,
+        fecha: fechaOk(r.fecha),
+        hecho: !!r.hecho,
+        hito: r.hito === "verde" || r.hito === "amarillo" ? r.hito : null,
+      })),
+    );
+    if (e3) return { ok: false, error: e3.message };
+  }
+  revalidatePath("/admin/aperturas");
+  return { ok: true as const };
+}
+
 export async function alternarItem(f: FormData) {
   const supabase = await db();
-  await supabase.from("apertura_items").update({ hecho: txt(f, "hecho") === "true" }).eq("id", num(f, "id"));
+  await supabase
+    .from("apertura_items")
+    .update({ hecho: txt(f, "hecho") === "true" })
+    .eq("id", num(f, "id"));
   revalidatePath("/admin/aperturas");
 }
 
 export async function agregarItem(f: FormData) {
   const supabase = await db();
   const texto = txt(f, "texto");
-  if (texto) await supabase.from("apertura_items").insert({ apertura_id: num(f, "apertura_id"), grupo: txt(f, "grupo") || "Otros", texto, orden: 999 });
+  if (texto)
+    await supabase
+      .from("apertura_items")
+      .insert({
+        apertura_id: num(f, "apertura_id"),
+        grupo: txt(f, "grupo") || "Otros",
+        texto,
+        orden: 999,
+      });
   revalidatePath("/admin/aperturas");
 }
 
