@@ -5,9 +5,11 @@ import FormHoja from "@/components/FormHoja";
 import { sesion } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function NuevaHoja() {
+export default async function NuevaHoja({ searchParams }: { searchParams: Promise<{ activo?: string }> }) {
+  const { activo } = await searchParams;
   const s = await sesion();
   if (!s?.perfil) redirect("/login");
+  if (s.perfil.rol === "supervisor") redirect("/censo");
   const supabase = await createClient();
   const [{ data: sucursales }, { data: equipos }, { data: activos }, { data: preventivos }] = await Promise.all([
     supabase.from("sucursales").select("id, nombre, zona").eq("activa", true).order("zona").order("nombre"),
@@ -34,6 +36,7 @@ export default async function NuevaHoja() {
           equipos={(equipos ?? []).map((e) => e.nombre as string)}
           activos={activos ?? []}
           preventivos={preventivos ?? []}
+          activoInicial={activo?.toUpperCase()}
         />
       </main>
     </>

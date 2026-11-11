@@ -9,6 +9,7 @@ const TABS = [
   ["/admin/preventivos", "Preventivos"],
   ["/admin/gastos", "Gastos"],
   ["/admin/activos", "Activos y garantías"],
+  ["/admin/activos/censo", "Censo"],
   ["/admin/caja", "Caja chica"],
   ["/admin/tecnicos", "Técnicos y proveedores"],
   ["/admin/refacciones", "Refacciones"],
@@ -21,7 +22,11 @@ const TABS = [
 export default function AdminTabs() {
   const path = usePathname();
   const nav = useRef<HTMLElement>(null);
-  const activo = (href: string) => (href === "/admin" ? path === "/admin" : path.startsWith(href));
+  const activo = (href: string) => {
+    if (href === "/admin") return path === "/admin";
+    if (href === "/admin/activos") return path.startsWith(href) && !path.startsWith("/admin/activos/censo");
+    return path.startsWith(href);
+  };
 
   useEffect(() => {
     nav.current?.querySelector<HTMLElement>('[aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });

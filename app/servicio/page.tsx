@@ -9,6 +9,7 @@ import type { Hoja } from "@/lib/types";
 export default async function MisHojas() {
   const s = await sesion();
   if (!s?.perfil) redirect("/login");
+  if (s.perfil.rol === "supervisor") redirect("/censo");
   const supabase = await createClient();
   const { data } = await supabase
     .from("v_hojas")

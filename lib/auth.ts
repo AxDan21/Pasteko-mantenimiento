@@ -17,6 +17,25 @@ export async function sesion(): Promise<{ userId: string; perfil: Perfil | null 
 export async function requireAdmin() {
   const s = await sesion();
   if (!s) redirect("/login?next=/admin");
-  if (!s.perfil || s.perfil.rol !== "admin" || !s.perfil.activo) redirect("/servicio");
+  if (!s.perfil || s.perfil.rol !== "admin" || !s.perfil.activo) redirect(inicioDe(s.perfil?.rol));
+  return { userId: s.userId, perfil: s.perfil };
+}
+
+/** Página de inicio de cada rol. */
+export const inicioDe = (rol?: string | null) => (rol === "admin" ? "/admin" : rol === "supervisor" ? "/censo" : "/servicio");
+
+/** Exige sesión de supervisor (o administrador, que puede ver todo el censo). */
+export async function requireSupervisor() {
+  const s = await sesion();
+  if (!s) redirect("/login?next=/censo");
+  if (!s.perfil || !s.perfil.activo || !["supervisor", "admin"].includes(s.perfil.rol)) redirect(inicioDe(s.perfil?.rol));
+  return { userId: s.userId, perfil: s.perfil };
+}
+
+/** Exige sesión de técnico o administrador (los supervisores van al censo). */
+export async function requireTecnico() {
+  const s = await sesion();
+  if (!s?.perfil || !s.perfil.activo) redirect("/login");
+  if (s.perfil.rol === "supervisor") redirect("/censo");
   return { userId: s.userId, perfil: s.perfil };
 }

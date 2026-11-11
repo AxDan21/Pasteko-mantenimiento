@@ -1,6 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { inicioDe } from "@/lib/auth";
 
 export async function iniciarSesion(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
@@ -17,7 +18,7 @@ export async function iniciarSesion(formData: FormData) {
     redirect("/login?error=inactivo");
   }
 
-  const destino = next.startsWith("/") && !next.startsWith("//") ? next : perfil.rol === "admin" ? "/admin" : "/servicio";
+  const destino = next.startsWith("/") && !next.startsWith("//") ? next : inicioDe(perfil.rol);
   redirect(destino);
 }
 

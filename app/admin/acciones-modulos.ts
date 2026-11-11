@@ -141,15 +141,11 @@ export async function borrarGasto(f: FormData) {
 // ---------- Activos ----------
 export async function crearActivo(f: FormData) {
   const supabase = await db();
-  let id = txt(f, "id").toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  const pedido = txt(f, "id").toUpperCase().replace(/[^A-Z0-9-]/g, "");
   const equipo = txt(f, "equipo");
-  if (!id) {
-    const pref = equipo.normalize("NFD").replace(/[^A-Za-z]/g, "").slice(0, 3).toUpperCase() || "EQP";
-    const { count } = await supabase.from("activos").select("id", { count: "exact", head: true }).like("id", `PK-${pref}-%`);
-    id = `PK-${pref}-${String((count ?? 0) + 1).padStart(3, "0")}`;
-  }
-  const { error } = await supabase.from("activos").insert({
-    id,
+  // Sin código: la base de datos asigna el siguiente (PK-CAF-012) sin riesgo de duplicados.
+  const { data: nuevo, error } = await supabase.from("activos").insert({
+    ...(pedido ? { id: pedido } : {}),
     sucursal_id: num(f, "sucursal_id"),
     equipo,
     marca: opcTxt(f, "marca"),
@@ -160,8 +156,11 @@ export async function crearActivo(f: FormData) {
     costo: num(f, "costo"),
     vida_anios: num(f, "vida_anios") || 8,
     proveedor_id: opcNum(f, "proveedor_id"),
-  });
-  if (error) redirect(`/admin/activos?error=${encodeURIComponent(error.message)}`);
+    descripcion: opcTxt(f, "descripcion"),
+    validado: true,
+  }).select("id").single();
+  if (error || !nuevo) redirect(`/admin/activos?error=${encodeURIComponent(error?.message ?? "No se pudo dar de alta")}`);
+  const id = nuevo.id as string;
   try {
     const ruta = await subirFactura(supabase, f, `garantias/${id}`, "garantia");
     if (ruta) await supabase.from("activos").update({ garantia_path: ruta }).eq("id", id);
@@ -207,10 +206,24 @@ export async function actualizarActivo(f: FormData) {
       proveedor_id: opcNum(f, "proveedor_id"),
       activo: txt(f, "activo") !== "false",
       notas: opcTxt(f, "notas"),
+      descripcion: opcTxt(f, "descripcion"),
+      equipo: txt(f, "equipo") || undefined,
     })
     .eq("id", id);
   revalidatePath("/admin/activos");
   redirect(`/admin/activos/${id}?ok=1`);
+}
+
+/** Valida uno o varios equipos registrados por supervisores. */
+export async function validarActivos(f: FormData) {
+  const { userId } = await requireAdmin();
+  const supabase = await createClient();
+  const ids = f.getAll("id").map(String).filter(Boolean);
+  const volver = txt(f, "volver") || "/admin/activos/censo";
+  if (!ids.length) redirect(`${volver}${volver.includes("?") ? "&" : "?"}error=${encodeURIComponent("Selecciona al menos un equipo.")}`);
+  await supabase.from("activos").update({ validado: true, validado_por: userId, validado_en: new Date().toISOString() }).in("id", ids);
+  revalidatePath("/admin/activos", "layout");
+  redirect(`${volver}${volver.includes("?") ? "&" : "?"}ok=validados-${ids.length}`);
 }
 
 // ---------- Caja chica ----------

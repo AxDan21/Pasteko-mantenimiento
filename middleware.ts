@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
+import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Refresca la sesión en cada petición y protege las áreas internas.
@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const privada = path.startsWith("/servicio") || path.startsWith("/admin");
+  const privada = path.startsWith("/servicio") || path.startsWith("/admin") || path.startsWith("/censo");
   if (privada && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -44,5 +44,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/servicio/:path*", "/admin/:path*", "/login"],
+  matcher: ["/servicio/:path*", "/admin/:path*", "/censo/:path*", "/a/:path*", "/login"],
 };

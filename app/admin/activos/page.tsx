@@ -35,7 +35,9 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
   if (f.zona) filas = filas.filter((i) => sucPorId.get(i.x.sucursal_id)?.zona === f.zona);
   if (f.equipo) filas = filas.filter((i) => i.x.equipo === f.equipo);
   if (f.rec === "garantia") filas = filas.filter((i) => i.pagadoGar > 0);
+  else if (f.rec === "validar") filas = filas.filter((i) => !i.x.validado);
   else if (f.rec) filas = filas.filter((i) => i.rec.texto === f.rec);
+  const porValidar = info.filter((i) => !i.x.validado).length;
 
   const porVencer = info.filter((i) => i.gar.clase === "warn").length;
   const reemplazo = info.filter((i) => i.rec.clase === "bad").length;
@@ -48,11 +50,22 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
           <p className="eyebrow">Panel de mantenimiento</p>
           <h1 className="page-h">Activos y garantías</h1>
         </div>
-        <Link className="btn" href="/admin/exportar?tabla=activos">Descargar CSV</Link>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link className="btn primary" href={`/admin/activos/etiquetas?${new URLSearchParams(f.zona ? { zona: f.zona } : { todas: "1" }).toString()}`}>Imprimir etiquetas QR</Link>
+          <Link className="btn" href="/admin/activos/censo">Censo de equipos</Link>
+          <Link className="btn" href="/admin/exportar?tabla=activos">Descargar CSV</Link>
+        </div>
       </div>
 
       {f.ok && <div className="note ok" style={{ marginBottom: 14 }}>Equipo dado de alta como {f.ok}. Imprime ese código en su etiqueta.</div>}
       {f.error && <div className="note bad" style={{ marginBottom: 14 }}>No se pudo guardar: {f.error}</div>}
+
+      {porValidar > 0 && (
+        <Link href="/admin/activos/censo#validar" className="note warn censo-banner" style={{ marginBottom: 14 }}>
+          <span>{porValidar} equipo{porValidar !== 1 ? "s" : ""} registrado{porValidar !== 1 ? "s" : ""} por supervisores por validar.</span>
+          <b>Revisar →</b>
+        </Link>
+      )}
 
       <div className="kpis">
         <div className="kpi"><span className="eyebrow">Equipos activos</span><span className="v">{info.filter((i) => i.x.activo).length}</span><span className="s">Valor {mxn(info.reduce((s, i) => s + Number(i.x.costo), 0))}</span></div>
@@ -63,7 +76,7 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
 
       <section className="card" style={{ marginBottom: 18 }}>
         <h3>Dar de alta equipo</h3>
-        <p className="sub">Si dejas el código vacío se genera solo (ej. PK-CAF-004). Ese código va en la etiqueta del equipo.</p>
+        <p className="sub">Si dejas el código vacío se genera solo (ej. PK-CAF-004). Al guardar se abre su ficha con la etiqueta QR lista para imprimir.</p>
         <form action={crearActivo} className="inline-form">
           <label className="field">Código (opcional)<input id="a-id" name="id" placeholder="PK-CAF-004" /></label>
           <label className="field">Sucursal
@@ -88,6 +101,7 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
           <label className="field">Proveedor de garantía
             <select id="a-prov" name="proveedor_id" defaultValue=""><option value="">Ninguno</option>{(prov ?? []).map((p) => <option key={p.id as number} value={p.id as number}>{p.nombre as string}</option>)}</select>
           </label>
+          <label className="field w2">Garantía (PDF o foto, opcional)<input id="a-gdoc" name="garantia" type="file" accept="application/pdf,image/*" /></label>
           <button className="btn primary" type="submit">Dar de alta</button>
         </form>
       </section>
@@ -97,7 +111,7 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
         <label className="field">Equipo<select id="f-eq" name="equipo" defaultValue={f.equipo ?? ""}><option value="">Todos</option>{(eqs ?? []).map((e) => <option key={e.nombre as string}>{e.nombre as string}</option>)}</select></label>
         <label className="field">Recomendación
           <select id="f-rec" name="rec" defaultValue={f.rec ?? ""}>
-            <option value="">Todas</option><option>Evaluar reemplazo</option><option>Vigilar</option><option>Reparar</option><option value="garantia">Pagado en garantía</option>
+            <option value="">Todas</option><option value="validar">Por validar (censo)</option><option>Evaluar reemplazo</option><option>Vigilar</option><option>Reparar</option><option value="garantia">Pagado en garantía</option>
           </select>
         </label>
         <label className="field">Dados de baja<select id="f-bajas" name="bajas" defaultValue={f.bajas ?? ""}><option value="">Ocultar</option><option value="1">Mostrar</option></select></label>
@@ -116,15 +130,15 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
                   <tr key={x.id} style={x.activo ? undefined : { opacity: 0.55 }}>
                     <td className="num"><Link href={`/admin/activos/${x.id}`}><b>{x.id}</b></Link></td>
                     <td>{sucPorId.get(x.sucursal_id)?.nombre}</td>
-                    <td>{x.equipo}<br /><small style={{ color: "var(--muted)" }}>{[x.marca, x.modelo].filter(Boolean).join(" ") || "—"}</small></td>
+                    <td>{x.descripcion || x.equipo}<br /><small style={{ color: "var(--muted)" }}>{x.descripcion ? `${x.equipo} · ` : ""}{[x.marca, x.modelo].filter(Boolean).join(" ") || "—"}</small></td>
                     <td className="num">{edad === null ? "—" : `${edad.toFixed(1)} / ${x.vida_anios} años`}</td>
-                    <td><span className={`pill ${gar.clase}`}>{gar.texto}</span>{pagadoGar > 0 && <> <span className="pill bad">Pagado en garantía</span></>}</td>
+                    <td><span className={`pill ${gar.clase}`}>{gar.texto}</span>{x.garantia_path && <> <span className="pill neutral">PDF</span></>}{pagadoGar > 0 && <> <span className="pill bad">Pagado en garantía</span></>}</td>
                     <td className="r">
                       <span className="num">{mxn(total)}</span>
                       <div className="bar" style={{ marginTop: 4 }}><i className={pct >= 50 ? "bad" : pct >= 30 ? "warn" : ""} style={{ width: `${Math.min(pct, 100)}%` }} /></div>
                       <small style={{ color: "var(--muted)" }}>{pct.toFixed(0)}% de {mxn(Number(x.costo))}</small>
                     </td>
-                    <td><span className={`pill ${rec.clase}`}>{x.activo ? rec.texto : "Dado de baja"}</span></td>
+                    <td>{x.validado === false ? <span className="pill warn">Por validar</span> : <span className={`pill ${rec.clase}`}>{x.activo ? rec.texto : "Dado de baja"}</span>}</td>
                   </tr>
                 );
               })}

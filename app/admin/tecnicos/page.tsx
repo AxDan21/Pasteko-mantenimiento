@@ -7,6 +7,7 @@ import { actualizarTecnico, cambiarPassword, crearTecnico } from "../actions";
 import { actualizarProveedor, crearProveedor } from "../acciones-modulos";
 
 const MSG: Record<string, string> = {
+  zona: "Para un supervisor elige su zona: solo verá y registrará equipos de esas sucursales.",
   datos: "Llena nombre y correo, y usa una contraseña de al menos 8 caracteres.",
   password: "La contraseña debe tener al menos 8 caracteres.",
 };
@@ -67,6 +68,7 @@ export default async function Tecnicos({ searchParams }: { searchParams: Promise
             <label className="field">Rol
               <select id="t-rol" name="rol" defaultValue="tecnico">
                 <option value="tecnico">Técnico</option>
+                <option value="supervisor">Supervisor (censo de su zona)</option>
                 <option value="admin">Administrador</option>
               </select>
             </label>
@@ -81,7 +83,7 @@ export default async function Tecnicos({ searchParams }: { searchParams: Promise
               {((perfiles ?? []) as Perfil[]).map((p) => (
                 <tr key={p.id}>
                   <td><b>{p.nombre}</b></td>
-                  <td>{p.rol === "admin" ? "Administrador" : "Técnico"}</td>
+                  <td>{p.rol === "admin" ? "Administrador" : p.rol === "supervisor" ? "Supervisor" : "Técnico"}</td>
                   <td>
                     <form action={actualizarTecnico} style={{ display: "flex", gap: 6 }}>
                       <input type="hidden" name="id" value={p.id} />

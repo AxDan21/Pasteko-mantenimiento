@@ -21,7 +21,7 @@ export type Faq = {
   orden: number;
 };
 
-export type Perfil = { id: string; nombre: string; rol: "tecnico" | "admin"; zona: string | null; activo: boolean };
+export type Perfil = { id: string; nombre: string; rol: "tecnico" | "admin" | "supervisor"; zona: string | null; activo: boolean };
 
 export type Refaccion = { descripcion: string; cantidad: number; costo: number };
 
@@ -63,6 +63,8 @@ export type Activo = {
   id: string; sucursal_id: number; equipo: string; marca: string | null; modelo: string | null; serie: string | null;
   fecha_compra: string | null; garantia_hasta: string | null; costo: number; vida_anios: number;
   proveedor_id: number | null; activo: boolean; notas: string | null; garantia_path?: string | null;
+  descripcion?: string | null; ficha_path?: string | null; foto_path?: string | null; registrado_por?: string | null;
+  registrado?: string; validado?: boolean; validado_por?: string | null; validado_en?: string | null;
 };
 
 export type Preventivo = {

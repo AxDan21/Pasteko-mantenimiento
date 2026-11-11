@@ -12,13 +12,15 @@ type Props = {
   equipos: string[];
   activos?: { id: string; sucursal_id: number; equipo: string; marca: string | null; modelo: string | null }[];
   preventivos?: { id: number; fecha: string; sucursal_id: number; equipo: string; activo_id: string | null; tarea: string }[];
+  /** Código del equipo escaneado (QR): preselecciona sucursal y equipo. */
+  activoInicial?: string;
 };
 
 type Foto = { id: string; blob: Blob; url: string };
 const MAX_FOTOS = 8;
 const BORRADOR = "pk-hoja-borrador";
 
-export default function FormHoja({ sucursales, equipos, activos = [], preventivos = [] }: Props) {
+export default function FormHoja({ sucursales, equipos, activos = [], preventivos = [], activoInicial }: Props) {
   const router = useRouter();
   const firma = useRef<FirmaHandle>(null);
   const [firmaVacia, setFirmaVacia] = useState(true);
@@ -51,6 +53,13 @@ export default function FormHoja({ sucursales, equipos, activos = [], preventivo
         setActivoId(b.activoId ?? ""); setPreventivoId(b.preventivoId ?? "");
       }
     } catch {}
+    const a = activoInicial ? activos.find((x) => x.id === activoInicial) : undefined;
+    if (a) {
+      setSucursal(String(a.sucursal_id));
+      setPreventivoId("");
+      elegirActivo(a.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     try {

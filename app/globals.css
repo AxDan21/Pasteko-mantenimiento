@@ -364,3 +364,37 @@ i.tl-open, .tl-legend i.tl-open { position: absolute; top: -6px; bottom: -6px; b
 .sel-chk { width: 18px; height: 18px; accent-color: var(--orange); }
 .pay-bar { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 12px; padding: 12px; background: var(--surface-2); border-radius: 10px; }
 .pay-bar .field { min-width: 170px; }
+
+/* ---------- Censo de equipos ---------- */
+.censo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.censo-suc { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--orange); border-radius: var(--r); padding: 14px; }
+.censo-suc.done { border-left-color: var(--ok); }
+.censo-suc:hover { border-color: var(--orange); }
+.censo-suc b { font-size: 17px; }
+.censo-suc small { color: var(--warn); font-weight: 700; }
+.censo-pasos ol { margin: 6px 0 0; padding-left: 20px; }
+.censo-pasos li { margin-bottom: 6px; }
+.censo-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.censo-ok { border: 2px solid var(--ok); text-align: center; }
+.inline-check { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--muted); }
+.inline-check input { width: 18px; height: 18px; accent-color: var(--orange); }
+.photo.add.has { border-style: solid; padding: 0; }
+.field .hint { font-weight: 400; font-size: 12px; color: var(--muted); }
+.censo-list { list-style: none; margin: 0; padding: 0; }
+.censo-list li { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.censo-list li:last-child { border-bottom: 0; }
+.censo-list img, .censo-list .no-img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; display: grid; place-items: center; background: var(--surface-2); font-size: 11px; color: var(--muted); }
+.censo-list p { margin: 2px 0; font-size: 14px; }
+.censo-list small { color: var(--muted); font-size: 12px; }
+.censo-banner { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; text-decoration: none; }
+.validar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.validar-item { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 10px; align-items: start; border: 1px solid var(--line); border-radius: 10px; padding: 10px; cursor: pointer; background: var(--surface); }
+.validar-item:has(input:checked) { border-color: var(--orange); box-shadow: 0 0 0 2px var(--brand-soft); }
+.validar-item small { display: block; color: var(--muted); font-size: 12px; }
+.validar-fotos { display: flex; gap: 6px; }
+.validar-fotos img, .validar-fotos .no-img { width: 76px; height: 76px; object-fit: cover; border-radius: 8px; background: var(--surface-2); display: grid; place-items: center; font-size: 11px; color: var(--muted); }
+.validar-fotos.grande img { width: 160px; height: 160px; }
+.validar-fotos a { display: flex; flex-direction: column; gap: 2px; text-decoration: none; }
+.validar-fotos small { font-size: 12px; color: var(--muted); }
+.ficha-censo { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+@media (max-width: 900px) { .censo-layout { grid-template-columns: 1fr; } }

@@ -83,8 +83,10 @@ export async function borrar(f: FormData) {
 export async function crearTecnico(f: FormData) {
   await requireAdmin();
   const email = txt(f, "email"), nombre = txt(f, "nombre"), password = txt(f, "password");
-  const rol = txt(f, "rol") === "admin" ? "admin" : "tecnico";
+  const rolPedido = txt(f, "rol");
+  const rol = rolPedido === "admin" ? "admin" : rolPedido === "supervisor" ? "supervisor" : "tecnico";
   if (!email || !nombre || password.length < 8) redirect("/admin/tecnicos?error=datos");
+  if (rol === "supervisor" && !txt(f, "zona")) redirect("/admin/tecnicos?error=zona");
 
   const admin = adminClient();
   const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { nombre } });
