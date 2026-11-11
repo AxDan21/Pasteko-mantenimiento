@@ -34,11 +34,16 @@ export async function GET(req: NextRequest) {
         h.refacciones.reduce((s, r) => s + r.cantidad * r.costo, 0), h.mano_obra, h.total, h.estado, h.recibe_nombre,
       ]),
     ];
-  } else if (tabla === "gastos") {
-    const { data } = await supabase.from("v_gastos").select("*").gte("fecha", ini).lt("fecha", fin).order("fecha");
+  } else if (tabla === "gastos" || tabla === "pendientes") {
+    let q = supabase.from("v_gastos").select("*").order("fecha");
+    q = tabla === "pendientes" ? q.eq("pagado", false) : q.gte("fecha", ini).lt("fecha", fin);
+    const { data } = await q;
     filas = [
-      ["fecha", "origen", "sucursal", "zona", "categoria", "tipo", "concepto", "activo", "monto"],
-      ...(data ?? []).map((g) => [g.fecha, g.origen, g.sucursal ?? "General", g.zona ?? "", g.categoria, g.tipo, g.concepto, g.activo_id ?? "", g.monto]),
+      ["fecha", "origen", "sucursal", "zona", "categoria", "tipo", "concepto", "proveedor_o_tecnico", "activo", "monto", "estado_pago", "fecha_pago", "referencia_pago"],
+      ...(data ?? []).map((g) => [
+        g.fecha, g.origen, g.sucursal ?? "General", g.zona ?? "", g.categoria, g.tipo, g.concepto, g.beneficiario ?? "", g.activo_id ?? "", g.monto,
+        g.pagado ? "Pagado" : "Pendiente", g.fecha_pago ?? "", g.referencia_pago ?? "",
+      ]),
     ];
   } else if (tabla === "preventivos") {
     const { data } = await supabase.from("preventivos").select("*, sucursales(nombre, zona), perfiles(nombre)").gte("fecha", ini).lt("fecha", fin).order("fecha");
@@ -74,7 +79,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Tabla no válida", { status: 400 });
   }
 
-  const nombre = ["activos", "refacciones"].includes(tabla) ? tabla : `${tabla}-${mes}`;
+  const nombre = ["activos", "refacciones"].includes(tabla) ? tabla : tabla === "pendientes" ? "pendientes-de-pago" : `${tabla}-${mes}`;
   return new NextResponse("﻿" + csv(filas), {
     headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="${nombre}.csv"` },
   });

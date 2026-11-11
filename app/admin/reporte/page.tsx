@@ -8,6 +8,7 @@ import type { Activo, GastoV, Preventivo } from "@/lib/types";
 
 const EXPORTS = [
   ["hojas", "Hojas de servicio"],
+  ["pendientes", "Pendientes de pago (todos los meses)"],
   ["gastos", "Gastos (todos los orígenes)"],
   ["preventivos", "Preventivos"],
   ["caja", "Caja chica"],
@@ -64,6 +65,7 @@ export default async function Reporte({ searchParams }: { searchParams: Promise<
     ["Gasto", [
       `${mxn(total)} de ${mxn(ajustes.presupuesto_mensual)} (${pct(total, ajustes.presupuesto_mensual)}).`,
       `Preventivo ${mxn(prev)} (${pct(prev, total)}) y correctivo u otros ${mxn(total - prev)} (${pct(total - prev, total)}).`,
+      gastos.some((x) => !x.pagado) ? `Realizado pendiente de pago en el mes: ${mxn(gastos.filter((x) => !x.pagado).reduce((s, x) => s + Number(x.monto), 0))}.` : "Todo lo realizado en el mes está pagado.",
       top.length ? `Sucursales con más gasto: ${top.map(([s, v]) => `${s} ${mxn(v)}`).join(", ")}.` : "Sin gasto por sucursal.",
       topCat.length ? `Categorías principales: ${topCat.map(([s, v]) => `${s} ${mxn(v)}`).join(", ")}.` : "",
     ].filter(Boolean)],

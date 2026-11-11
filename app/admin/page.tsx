@@ -13,7 +13,7 @@ export default async function Resumen() {
   const h = hoy(), mes = mesActual(), desde = sumarMeses(mes, -5);
   const [ini, fin] = rangoFechas(mes);
 
-  const [ajustes, { data: g }, { data: p }, { data: a }, { data: r }, { data: c }, { count: porRevisar }, acum] = await Promise.all([
+  const [ajustes, { data: g }, { data: p }, { data: a }, { data: r }, { data: c }, { count: porRevisar }, { data: pp }, acum] = await Promise.all([
     leerAjustes(supabase),
     supabase.from("v_gastos").select("fecha, sucursal, tipo, monto, origen").gte("fecha", `${desde}-01`).lt("fecha", fin),
     supabase.from("preventivos").select("id, fecha, sucursal_id, equipo, tarea, hecho, sucursales(nombre)").lte("fecha", sumarDias(h, 60)).order("fecha"),
@@ -21,6 +21,7 @@ export default async function Resumen() {
     supabase.from("refacciones").select("stock, minimo"),
     supabase.from("caja_chica").select("monto, factura_path").gte("fecha", ini).lt("fecha", fin),
     supabase.from("hojas_servicio").select("id", { count: "exact", head: true }).eq("estado", "Enviada"),
+    supabase.from("v_gastos").select("monto").eq("pagado", false),
     acumuladoPorActivo(supabase),
   ]);
 
@@ -66,6 +67,7 @@ export default async function Resumen() {
     [refBajas, "warn", "refacciones debajo del mínimo", "/admin/refacciones"],
     [sinFactura, "warn", "gastos de caja chica sin factura", "/admin/caja"],
     [porRevisar ?? 0, "neutral", "hojas de servicio por revisar", "/admin/hojas?estado=Enviada"],
+    [(pp ?? []).length, "warn", `trabajos pendientes de pago · ${mxn((pp ?? []).reduce((s, x) => s + Number(x.monto), 0))}`, "/admin/gastos#pendientes"],
   ].filter((x) => Number(x[0]) > 0) as [number, string, string, string][];
 
   return (

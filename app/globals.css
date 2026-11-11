@@ -316,3 +316,51 @@ i.tl-open, .tl-legend i.tl-open { position: absolute; top: -6px; bottom: -6px; b
 .tl-legend i.tl-today, .tl-legend i.tl-open { top: 2px; bottom: 2px; left: 2px; }
 .tl-legend .tl-dot { position: relative; top: auto; transform: rotate(45deg); left: auto; margin-left: -8px; }
 .gantt-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+
+/* ---------- QR de equipos y garantías ---------- */
+.qr-gar { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; margin-bottom: 16px; }
+.qr-card { display: flex; gap: 18px; align-items: center; }
+.qr-big { width: 150px; height: 150px; flex: none; background: #fff; border-radius: 10px; padding: 6px; border: 1px solid var(--line); }
+.doc-file { display: flex; gap: 12px; align-items: center; text-decoration: none; border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.doc-file:hover { border-color: var(--orange); }
+.doc-file b { background: var(--bad); color: #fff; border-radius: 6px; padding: 6px 8px; font-size: 12px; }
+.doc-img { max-height: 160px; border-radius: 8px; border: 1px solid var(--line); }
+.scan-cta { display: flex; flex-direction: column; gap: 4px; text-decoration: none; border: 2px solid var(--orange); }
+.scan-cta b { font-size: 20px; font-family: var(--f-display), sans-serif; }
+.timeline { list-style: none; margin: 0; padding: 0; }
+.timeline li { border-left: 3px solid var(--orange); padding: 4px 0 14px 14px; margin-left: 4px; }
+.timeline li p { margin: 6px 0 0; font-size: 15px; }
+.timeline .tl-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* Hoja de etiquetas (carta) */
+.etiquetas { display: grid; grid-template-columns: repeat(auto-fill, 6.5cm); gap: 0; background: #fff; color: #111; }
+.etq { width: 6.5cm; height: 3.5cm; border: 1px dashed #bbb; display: flex; gap: 0.2cm; align-items: center; padding: 0.2cm; overflow: hidden; background: #fff; color: #111; break-inside: avoid; }
+.etq-qr { width: 2.9cm; height: 2.9cm; flex: none; }
+.etq-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.15; }
+.etq-txt b { font-size: 11pt; }
+.etq-txt span { font-size: 8pt; font-weight: 700; }
+.etq-txt small { font-size: 7pt; color: #444; }
+.etq-marca { display: flex; align-items: center; gap: 3px; background: #fd7a0f; color: #111 !important; border-radius: 3px; padding: 1px 4px; font-size: 6.5pt !important; margin-bottom: 2px; width: max-content; }
+.etq-marca img { width: 12px; height: 12px; object-fit: cover; object-position: top; border-radius: 50%; }
+.etq-hint { margin-top: 2px; font-style: italic; }
+.etiquetas.grande { grid-template-columns: repeat(auto-fill, 9cm); }
+.etiquetas.grande .etq { width: 9cm; height: 5cm; gap: 0.3cm; padding: 0.3cm; }
+.etiquetas.grande .etq-qr { width: 4.2cm; height: 4.2cm; }
+.etiquetas.grande .etq-txt b { font-size: 14pt; }
+.etiquetas.grande .etq-txt span { font-size: 10pt; }
+.etiquetas.grande .etq-txt small { font-size: 8.5pt; }
+@media (max-width: 900px) { .qr-gar { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .qr-card { flex-direction: column; align-items: flex-start; } }
+@media print {
+  @page { size: letter; margin: 10mm; }
+  .admin-tabs, .no-print { display: none !important; }
+  .etiquetas { grid-template-columns: repeat(3, 6.5cm); }
+  .etiquetas.grande { grid-template-columns: repeat(2, 9cm); }
+  .etq, .etq-marca { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+/* ---------- Pendientes de pago ---------- */
+.pend-card { border: 2px solid var(--warn); }
+.sel-chk { width: 18px; height: 18px; accent-color: var(--orange); }
+.pay-bar { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; margin-top: 12px; padding: 12px; background: var(--surface-2); border-radius: 10px; }
+.pay-bar .field { min-width: 170px; }

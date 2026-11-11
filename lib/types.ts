@@ -62,7 +62,7 @@ export type Proveedor = {
 export type Activo = {
   id: string; sucursal_id: number; equipo: string; marca: string | null; modelo: string | null; serie: string | null;
   fecha_compra: string | null; garantia_hasta: string | null; costo: number; vida_anios: number;
-  proveedor_id: number | null; activo: boolean; notas: string | null;
+  proveedor_id: number | null; activo: boolean; notas: string | null; garantia_path?: string | null;
 };
 
 export type Preventivo = {
@@ -73,6 +73,7 @@ export type Preventivo = {
 export type GastoV = {
   origen: "hoja" | "gasto" | "caja"; ref: string; fecha: string; sucursal_id: number | null; sucursal: string | null;
   zona: string | null; categoria: string; tipo: string; concepto: string; monto: number; activo_id: string | null;
+  pagado: boolean; fecha_pago: string | null; referencia_pago: string | null; beneficiario: string | null;
 };
 
 export type Gasto = {
