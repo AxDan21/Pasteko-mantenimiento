@@ -24,7 +24,7 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
   if (!eq) notFound();
 
   const s = await sesion();
-  const interno = !!s?.perfil?.activo && s.perfil.rol !== "supervisor";
+  const interno = !!s?.perfil?.activo && s.perfil.rol !== "supervisor" && s.perfil.rol !== "consulta";
   const supervisor = s?.perfil?.rol === "supervisor" && s.perfil.activo;
   const admin = s?.perfil?.rol === "admin";
 

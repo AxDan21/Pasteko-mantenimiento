@@ -10,10 +10,11 @@ export default async function NuevaHoja({ searchParams }: { searchParams: Promis
   const s = await sesion();
   if (!s?.perfil) redirect("/login");
   if (s.perfil.rol === "supervisor") redirect("/censo");
+  if (s.perfil.rol === "consulta") redirect("/aperturas");
   const supabase = await createClient();
   const [{ data: sucursales }, { data: equipos }, { data: activos }, { data: preventivos }] = await Promise.all([
     supabase.from("sucursales").select("id, nombre, zona").eq("activa", true).order("zona").order("nombre"),
-    supabase.from("equipos").select("nombre").order("orden"),
+    supabase.from("equipos").select("nombre").eq("vigente", true).order("orden"),
     supabase.from("activos").select("id, sucursal_id, equipo, marca, modelo").eq("activo", true).order("id"),
     supabase.from("preventivos").select("id, fecha, sucursal_id, equipo, activo_id, tarea").eq("hecho", false).order("fecha"),
   ]);

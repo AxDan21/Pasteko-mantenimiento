@@ -27,7 +27,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
     supabase.from("v_gastos").select("*").eq("pagado", false).order("fecha"),
     supabase.from("gastos").select("id, factura_path").gte("fecha", ini).lt("fecha", fin),
     supabase.from("sucursales").select("id, nombre, zona").order("zona").order("nombre"),
-    supabase.from("equipos").select("categoria"),
+    supabase.from("equipos").select("categoria").eq("vigente", true).order("orden"),
     supabase.from("proveedores").select("id, nombre").eq("activo", true).order("nombre"),
     supabase.from("activos").select("id").eq("activo", true).order("id"),
   ]);

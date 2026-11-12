@@ -28,7 +28,7 @@ export default async function CensoSucursal({ params, searchParams }: { params: 
 
   const [{ data: a }, { data: eqs }] = await Promise.all([
     supabase.from("activos").select("*").eq("sucursal_id", s.id).eq("activo", true).order("registrado", { ascending: false }),
-    supabase.from("equipos").select("nombre").order("orden"),
+    supabase.from("equipos").select("nombre").eq("vigente", true).order("orden"),
   ]);
   const activos = (a ?? []) as Activo[];
   const urls = await enlaces(supabase, "censo", activos.flatMap((x) => [x.ficha_path, x.foto_path]));

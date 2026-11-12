@@ -69,6 +69,7 @@ export default async function Tecnicos({ searchParams }: { searchParams: Promise
               <select id="t-rol" name="rol" defaultValue="tecnico">
                 <option value="tecnico">Técnico</option>
                 <option value="supervisor">Supervisor (censo de su zona)</option>
+                <option value="consulta">Consulta (solo ve aperturas)</option>
                 <option value="admin">Administrador</option>
               </select>
             </label>
@@ -83,7 +84,7 @@ export default async function Tecnicos({ searchParams }: { searchParams: Promise
               {((perfiles ?? []) as Perfil[]).map((p) => (
                 <tr key={p.id}>
                   <td><b>{p.nombre}</b></td>
-                  <td>{p.rol === "admin" ? "Administrador" : p.rol === "supervisor" ? "Supervisor" : "Técnico"}</td>
+                  <td>{p.rol === "admin" ? "Administrador" : p.rol === "supervisor" ? "Supervisor" : p.rol === "consulta" ? "Consulta" : "Técnico"}</td>
                   <td>
                     <form action={actualizarTecnico} style={{ display: "flex", gap: 6 }}>
                       <input type="hidden" name="id" value={p.id} />

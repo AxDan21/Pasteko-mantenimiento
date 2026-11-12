@@ -24,7 +24,7 @@ export default async function Preventivos({ searchParams }: { searchParams: Prom
   const [{ data: p }, { data: suc }, { data: eqs }, { data: act }, { data: tec }, { data: prov }] = await Promise.all([
     q,
     supabase.from("sucursales").select("id, nombre, zona").order("zona").order("nombre"),
-    supabase.from("equipos").select("nombre").order("orden"),
+    supabase.from("equipos").select("nombre").eq("vigente", true).order("orden"),
     supabase.from("activos").select("id, sucursal_id, equipo").eq("activo", true).order("id"),
     supabase.from("perfiles").select("id, nombre").eq("activo", true).order("nombre"),
     supabase.from("proveedores").select("id, nombre").eq("activo", true).order("nombre"),

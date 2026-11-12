@@ -73,4 +73,4 @@ export function recomendacion(a: { costo: number; fecha_compra: string | null; v
 
 export const edadAnios = (fecha: string | null, ref = hoy()) => (fecha ? diasEntre(fecha, ref) / 365.25 : null);
 
-export const CATEGORIAS_EXTRA = ["Eléctrico", "Plomería", "Obra civil", "Herrería", "Otros"];
+export const CATEGORIAS_EXTRA = ["Instalaciones"];

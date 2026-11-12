@@ -32,7 +32,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const privada = path.startsWith("/servicio") || path.startsWith("/admin") || path.startsWith("/censo");
+  const privada = path.startsWith("/servicio") || path.startsWith("/admin") || path.startsWith("/censo") || path.startsWith("/aperturas");
   if (privada && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
@@ -44,5 +44,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/servicio/:path*", "/admin/:path*", "/censo/:path*", "/a/:path*", "/login"],
+  matcher: ["/servicio/:path*", "/admin/:path*", "/censo/:path*", "/aperturas/:path*", "/aperturas", "/a/:path*", "/login"],
 };

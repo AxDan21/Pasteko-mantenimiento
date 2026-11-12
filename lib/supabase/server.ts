@@ -1,7 +1,7 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
+import { cookies } from "next/headers";
 
 /** Cliente de Supabase para componentes de servidor, server actions y rutas. */
 export async function createClient() {
@@ -16,14 +16,12 @@ export async function createClient() {
         },
         setAll(cookiesToSet: CookieToSet[]) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
-            );
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
           } catch {
             // Llamado desde un Server Component: el middleware ya refresca la sesión.
           }
         },
       },
-    },
+    }
   );
 }

@@ -5,7 +5,7 @@ import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { youtubeId } from "@/lib/format";
 import type { Equipo, Faq, Video } from "@/lib/types";
-import { actualizarVideo, alternarPublicado, borrar, crearEquipo, crearFaq, crearVideo } from "../actions";
+import { actualizarVideo, alternarPublicado, alternarVigente, borrar, crearEquipo, crearFaq, crearVideo } from "../actions";
 
 function Borrar({ tabla, id, que }: { tabla: string; id: number; que: string }) {
   return (
@@ -53,10 +53,10 @@ export default async function Contenido() {
                   <span className="eq-ico"><Icono nombre={eq.icono} /></span>
                   <span>
                     <b style={{ fontSize: 18 }}>{eq.nombre}</b><br />
-                    <small style={{ color: "var(--muted)" }}>{vs.length} videos · {fs.length} preguntas · /equipo/{eq.slug}</small>
+                    <small style={{ color: "var(--muted)" }}>{eq.categoria}{eq.prefijo ? ` · código PK-${eq.prefijo}` : ""} · {vs.length} videos · {fs.length} preguntas</small>
                   </span>
                 </span>
-                <span className={`pill ${eq.publicado ? "ok" : "neutral"}`}>{eq.publicado ? "Publicado" : "Oculto"}</span>
+                {eq.vigente === false ? <span className="pill neutral">Fuera de catálogo</span> : <span className={`pill ${eq.publicado ? "ok" : "neutral"}`}>{eq.publicado ? "Con guía para tiendas" : "Sin guía (solo censo)"}</span>}
               </summary>
 
               <div className="detail" style={{ marginTop: 16 }}>
@@ -116,6 +116,11 @@ export default async function Contenido() {
                     <input type="hidden" name="publicado" value={String(!eq.publicado)} />
                     <button className="btn small" type="submit">{eq.publicado ? "Ocultar de tiendas" : "Publicar"}</button>
                   </form>
+                  <form action={alternarVigente}>
+                    <input type="hidden" name="id" value={eq.id} />
+                    <input type="hidden" name="vigente" value={String(eq.vigente === false)} />
+                    <button className="btn small" type="submit">{eq.vigente === false ? "Regresar al catálogo" : "Sacar del catálogo"}</button>
+                  </form>
                   {!vs.length && !fs.length && <Borrar tabla="equipos" id={eq.id} que={eq.nombre} />}
                 </aside>
               </div>
@@ -127,11 +132,13 @@ export default async function Contenido() {
           <h3>Agregar equipo</h3>
           <form action={crearEquipo} className="inline-form">
             <label className="field w2">Nombre<input name="nombre" required placeholder="Ej. Freidora" /></label>
-            <label className="field">Categoría<input name="categoria" placeholder="Ej. Cocina" /></label>
+            <label className="field">Categoría<input name="categoria" list="cats" placeholder="Ej. Refrigeración" /><datalist id="cats">{Array.from(new Set(equipos.filter((e) => e.vigente !== false).map((e) => e.categoria))).map((c) => <option key={c} value={c} />)}</datalist></label>
             <label className="field">Icono
               <select name="icono" defaultValue="general">{ICONOS.map((i) => <option key={i}>{i}</option>)}</select>
             </label>
             <label className="field">Orden<input name="orden" type="number" defaultValue={equipos.length + 1} /></label>
+            <label className="field">Prefijo del código<input name="prefijo" maxLength={4} placeholder="Ej. FRE" style={{ textTransform: "uppercase" }} /></label>
+            <label className="field">Guía para tiendas<select name="publicado" defaultValue="false"><option value="false">No (solo censo)</option><option value="true">Sí, publicar</option></select></label>
             <button className="btn primary" type="submit">Agregar equipo</button>
           </form>
         </section>

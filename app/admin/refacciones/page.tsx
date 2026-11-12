@@ -11,7 +11,7 @@ export default async function Refacciones() {
   const supabase = await createClient();
   const [{ data: r }, { data: eqs }] = await Promise.all([
     supabase.from("refacciones").select("*").order("nombre"),
-    supabase.from("equipos").select("nombre").order("orden"),
+    supabase.from("equipos").select("nombre").eq("vigente", true).order("orden"),
   ]);
   const refs = (r ?? []) as Refaccion2[];
   const bajas = refs.filter((x) => x.stock < x.minimo);

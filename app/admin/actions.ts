@@ -33,7 +33,11 @@ export async function crearEquipo(f: FormData) {
   const slug = (txt(f, "slug") || nombre)
     .normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   if (!nombre || !slug) return;
-  await supabase.from("equipos").insert({ nombre, slug, categoria: txt(f, "categoria") || "General", icono: txt(f, "icono") || "general", orden: num(f, "orden") });
+  const prefijo = txt(f, "prefijo").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4) || null;
+  await supabase.from("equipos").insert({
+    nombre, slug, categoria: txt(f, "categoria") || "General", icono: txt(f, "icono") || "general", orden: num(f, "orden"),
+    prefijo, publicado: txt(f, "publicado") === "true", vigente: true,
+  });
   refrescarPublico();
 }
 
@@ -41,6 +45,15 @@ export async function alternarPublicado(f: FormData) {
   await requireAdmin();
   const supabase = await createClient();
   await supabase.from("equipos").update({ publicado: txt(f, "publicado") === "true" }).eq("id", num(f, "id"));
+  refrescarPublico();
+}
+
+/** Saca un tipo del catálogo (o lo regresa). No borra su historial ni su contenido. */
+export async function alternarVigente(f: FormData) {
+  await requireAdmin();
+  const supabase = await createClient();
+  const vigente = txt(f, "vigente") === "true";
+  await supabase.from("equipos").update(vigente ? { vigente } : { vigente, publicado: false }).eq("id", num(f, "id"));
   refrescarPublico();
 }
 
@@ -84,7 +97,7 @@ export async function crearTecnico(f: FormData) {
   await requireAdmin();
   const email = txt(f, "email"), nombre = txt(f, "nombre"), password = txt(f, "password");
   const rolPedido = txt(f, "rol");
-  const rol = rolPedido === "admin" ? "admin" : rolPedido === "supervisor" ? "supervisor" : "tecnico";
+  const rol = ["admin", "supervisor", "consulta"].includes(rolPedido) ? rolPedido : "tecnico";
   if (!email || !nombre || password.length < 8) redirect("/admin/tecnicos?error=datos");
   if (rol === "supervisor" && !txt(f, "zona")) redirect("/admin/tecnicos?error=zona");
 

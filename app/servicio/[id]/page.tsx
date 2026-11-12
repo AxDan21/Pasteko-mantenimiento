@@ -17,6 +17,7 @@ export default async function VerHoja({
   const s = await sesion();
   if (!s?.perfil) redirect("/login");
   if (s.perfil.rol === "supervisor") redirect("/censo");
+  if (s.perfil.rol === "consulta") redirect("/aperturas");
   const supabase = await createClient();
   const { data: hoja } = await supabase.from("v_hojas").select("*").eq("id", id).maybeSingle<Hoja>();
   if (!hoja) notFound();

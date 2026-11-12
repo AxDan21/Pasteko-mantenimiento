@@ -10,6 +10,7 @@ export default async function MisHojas() {
   const s = await sesion();
   if (!s?.perfil) redirect("/login");
   if (s.perfil.rol === "supervisor") redirect("/censo");
+  if (s.perfil.rol === "consulta") redirect("/aperturas");
   const supabase = await createClient();
   const { data } = await supabase
     .from("v_hojas")

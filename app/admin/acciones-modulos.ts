@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { sumarMeses } from "@/lib/panel";
-import { filasDesdePlantilla, type FilaGantt } from "@/lib/gantt";
 
 const txt = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const num = (f: FormData, k: string) => Number(f.get(k) ?? 0) || 0;
@@ -318,66 +317,4 @@ export async function borrarRefaccion(f: FormData) {
   const supabase = await db();
   await supabase.from("refacciones").delete().eq("id", num(f, "id"));
   revalidatePath("/admin/refacciones");
-}
-
-// ---------- Aperturas (Gantt) ----------
-export async function crearApertura(f: FormData) {
-  const supabase = await db();
-  const fecha = txt(f, "fecha");
-  const { data, error } = await supabase
-    .from("aperturas")
-    .insert({ nombre: txt(f, "nombre"), fecha, tipo: txt(f, "tipo") === "Propia" ? "Propia" : "Franquicia", notas: opcTxt(f, "notas") })
-    .select("id")
-    .single();
-  if (error || !data) redirect(`/admin/aperturas?error=${encodeURIComponent(error?.message ?? "alta")}`);
-  const items = filasDesdePlantilla(fecha).map((r, i) => ({ apertura_id: data.id, grupo: "Gantt", orden: i, texto: r.actividad, responsable: r.responsable, fecha: r.fecha, hito: r.hito, hecho: false }));
-  await supabase.from("apertura_items").insert(items);
-  revalidatePath("/admin/aperturas");
-  redirect(`/admin/aperturas?id=${data.id}`);
-}
-
-/** Guarda todo el Gantt de una apertura (encabezado y pasos) desde el editor. */
-export async function guardarGantt(datos: { id: number; nombre: string; fecha: string; tipo: string; filas: FilaGantt[] }) {
-  const supabase = await db();
-  const fechaOk = (v: string | null) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : null);
-  if (!datos.nombre.trim() || !fechaOk(datos.fecha)) return { ok: false, error: "Falta el nombre o la fecha de apertura." };
-  const filas = datos.filas.filter((r) => r.actividad.trim());
-  const { error: e1 } = await supabase
-    .from("aperturas")
-    .update({ nombre: datos.nombre.trim(), fecha: datos.fecha, tipo: datos.tipo === "Propia" ? "Propia" : "Franquicia" })
-    .eq("id", datos.id);
-  if (e1) return { ok: false, error: e1.message };
-  const { error: e2 } = await supabase.from("apertura_items").delete().eq("apertura_id", datos.id);
-  if (e2) return { ok: false, error: e2.message };
-  if (filas.length) {
-    const { error: e3 } = await supabase.from("apertura_items").insert(
-      filas.map((r, i) => ({
-        apertura_id: datos.id, grupo: "Gantt", orden: i, texto: r.actividad.trim(), responsable: r.responsable.trim() || null,
-        fecha: fechaOk(r.fecha), hecho: !!r.hecho, hito: r.hito === "verde" || r.hito === "amarillo" ? r.hito : null,
-      }))
-    );
-    if (e3) return { ok: false, error: e3.message };
-  }
-  revalidatePath("/admin/aperturas");
-  return { ok: true as const };
-}
-
-export async function alternarItem(f: FormData) {
-  const supabase = await db();
-  await supabase.from("apertura_items").update({ hecho: txt(f, "hecho") === "true" }).eq("id", num(f, "id"));
-  revalidatePath("/admin/aperturas");
-}
-
-export async function agregarItem(f: FormData) {
-  const supabase = await db();
-  const texto = txt(f, "texto");
-  if (texto) await supabase.from("apertura_items").insert({ apertura_id: num(f, "apertura_id"), grupo: txt(f, "grupo") || "Otros", texto, orden: 999 });
-  revalidatePath("/admin/aperturas");
-}
-
-export async function borrarApertura(f: FormData) {
-  const supabase = await db();
-  await supabase.from("aperturas").delete().eq("id", num(f, "id"));
-  revalidatePath("/admin/aperturas");
-  redirect("/admin/aperturas");
 }

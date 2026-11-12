@@ -19,7 +19,7 @@ export default async function FichaActivo({ params, searchParams }: { params: Pr
     supabase.from("v_gastos").select("*").eq("activo_id", id).order("fecha", { ascending: false }),
     supabase.from("sucursales").select("id, nombre").order("nombre"),
     supabase.from("proveedores").select("id, nombre").order("nombre"),
-    supabase.from("equipos").select("nombre").order("orden"),
+    supabase.from("equipos").select("nombre").eq("vigente", true).order("orden"),
     supabase.from("preventivos").select("id, fecha, tarea, hecho").eq("activo_id", id).order("fecha", { ascending: false }).limit(12),
   ]);
   if (!a) notFound();

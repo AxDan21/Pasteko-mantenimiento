@@ -8,6 +8,8 @@ export type Equipo = {
   icono: string;
   orden: number;
   publicado: boolean;
+  prefijo?: string | null;
+  vigente?: boolean;
 };
 
 export type Video = { id: number; equipo_id: number; titulo: string; youtube_url: string; duracion: string | null; orden: number };
@@ -21,7 +23,7 @@ export type Faq = {
   orden: number;
 };
 
-export type Perfil = { id: string; nombre: string; rol: "tecnico" | "admin" | "supervisor"; zona: string | null; activo: boolean };
+export type Perfil = { id: string; nombre: string; rol: "tecnico" | "admin" | "supervisor" | "consulta"; zona: string | null; activo: boolean };
 
 export type Refaccion = { descripcion: string; cantidad: number; costo: number };
 

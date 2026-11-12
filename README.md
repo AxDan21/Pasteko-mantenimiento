@@ -17,7 +17,7 @@ Tecnología: Next.js 15 (TypeScript) · Supabase (Postgres, Auth, Storage) · Ve
 1. Entra a <https://supabase.com>, crea una organización y un proyecto (región: **East US** o la más cercana a México).
 2. En **SQL Editor > New query**, pega todo `supabase/migrations/0001_init.sql` y pulsa **Run**.
 3. Abre otra consulta, pega `supabase/seed.sql` y pulsa **Run**. Carga las 33 sucursales, 6 equipos y preguntas iniciales.
-4. Abre otra consulta, pega `supabase/migrations/0002_modulos.sql` y pulsa **Run**. Crea los módulos del panel: preventivos, gastos, activos, caja chica, proveedores, refacciones y aperturas.
+4. Ejecuta igual, en orden, `0002_modulos.sql`, `0003_gantt_aperturas.sql` y `0004_qr_garantias.sql` (carpeta `supabase/migrations`). El primero de ellos, `supabase/migrations/0002_modulos.sql` y pulsa **Run**. Crea los módulos del panel: preventivos, gastos, activos, caja chica, proveedores, refacciones y aperturas.
 4. En **Project Settings > API** copia:
    - `Project URL` → `NEXT_PUBLIC_SUPABASE_URL`
    - `anon public` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
@@ -108,3 +108,21 @@ supabase/                   Esquema SQL y datos iniciales
 - **Preventivos** se asignan a un técnico. Cuando el técnico envía una hoja tipo Preventivo y elige ese preventivo, queda marcado como hecho y ligado a la hoja.
 - **Activos**: cada equipo tiene un código (ej. `PK-CAF-001`). Si el técnico lo elige en la hoja, el costo se suma al historial del equipo y el panel recomienda reparar, vigilar o evaluar reemplazo. También detecta correctivos pagados con la garantía vigente.
 - **Facturas** de gastos y caja chica se guardan en el bucket privado `facturas`.
+
+## Etiquetas QR de equipos
+
+- Cada equipo en **Activos y garantías** tiene su QR, que abre `/a/<código>`.
+- Sin sesión (personal de tienda) se ve solo el nombre del equipo y su guía. Con sesión de técnico se ve el historial de reparaciones (sin costos) y el botón para crear la hoja de servicio con el equipo ya elegido. El administrador ve además la ficha con costos.
+- **Imprimir etiquetas QR** genera hojas carta (chica 6.5 × 3.5 cm o grande 9 × 5 cm). Recomendado: papel adhesivo o laminar la etiqueta, porque cocina y refrigeración la desgastan.
+- `NEXT_PUBLIC_SITE_URL` debe tener la dirección definitiva antes de imprimir: si cambias de dominio, hay que reimprimir.
+
+## Censo de equipos (supervisores)
+
+1. Ejecuta `supabase/migrations/0006_censo_supervisores.sql`.
+2. En **Técnicos y proveedores**, da de alta a cada supervisor con rol **Supervisor** y su **zona**.
+3. El supervisor entra a `/login` y llega a `/censo`: ve solo las sucursales de su zona. Por cada equipo captura tipo, descripción, número de serie y foto de la ficha técnica (la foto del equipo es opcional). El código (ej. `PK-CAF-012`) se asigna solo y no se repite.
+4. Si un número de serie ya existe, el sistema avisa en qué sucursal está registrado.
+5. Al terminar una tienda, el supervisor toca **Sucursal completa**. Puede imprimir las etiquetas QR de su zona en **Etiquetas QR**.
+6. Tú revisas en **Panel > Censo**: avance por sucursal y la cola **Por validar** con las fotos. Abre cada equipo para completar costo, fecha de compra y garantía.
+
+Los supervisores no pueden crear hojas de servicio, ni ver costos de reparación, ni equipos de otras zonas. Solo pueden borrar equipos que ellos registraron y que aún no se validan.

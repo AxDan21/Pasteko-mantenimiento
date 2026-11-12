@@ -22,7 +22,16 @@ export async function requireAdmin() {
 }
 
 /** Página de inicio de cada rol. */
-export const inicioDe = (rol?: string | null) => (rol === "admin" ? "/admin" : rol === "supervisor" ? "/censo" : "/servicio");
+export const inicioDe = (rol?: string | null) =>
+  rol === "admin" ? "/admin" : rol === "supervisor" ? "/censo" : rol === "consulta" ? "/aperturas" : "/servicio";
+
+/** Aperturas: el administrador edita; el rol de consulta (dirección) solo ve. */
+export async function requireAperturas() {
+  const s = await sesion();
+  if (!s) redirect("/login?next=/aperturas");
+  if (!s.perfil || !s.perfil.activo || !["admin", "consulta"].includes(s.perfil.rol)) redirect(inicioDe(s.perfil?.rol));
+  return { userId: s.userId, perfil: s.perfil, puedeEditar: s.perfil.rol === "admin" };
+}
 
 /** Exige sesión de supervisor (o administrador, que puede ver todo el censo). */
 export async function requireSupervisor() {
@@ -36,6 +45,6 @@ export async function requireSupervisor() {
 export async function requireTecnico() {
   const s = await sesion();
   if (!s?.perfil || !s.perfil.activo) redirect("/login");
-  if (s.perfil.rol === "supervisor") redirect("/censo");
+  if (s.perfil.rol === "supervisor" || s.perfil.rol === "consulta") redirect(inicioDe(s.perfil.rol));
   return { userId: s.userId, perfil: s.perfil };
 }

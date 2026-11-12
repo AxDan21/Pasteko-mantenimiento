@@ -12,7 +12,6 @@ export default function FormEquipoCenso({ sucursalId, sucursal, equipos, esAdmin
   const router = useRouter();
   const form = useRef<HTMLFormElement>(null);
   const [tipo, setTipo] = useState("");
-  const [otro, setOtro] = useState("");
   const [sinSerie, setSinSerie] = useState(false);
   const [ficha, setFicha] = useState<Foto>(null);
   const [foto, setFoto] = useState<Foto>(null);
@@ -38,7 +37,7 @@ export default function FormEquipoCenso({ sucursalId, sucursal, equipos, esAdmin
 
   function reiniciar() {
     form.current?.reset();
-    setTipo(""); setOtro(""); setSinSerie(false); setFicha(null); setFoto(null);
+    setTipo(""); setSinSerie(false); setFicha(null); setFoto(null);
     setHecho(null); setError(null); setEstado(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -47,7 +46,7 @@ export default function FormEquipoCenso({ sucursalId, sucursal, equipos, esAdmin
     e.preventDefault();
     setError(null);
     const fd = new FormData(e.currentTarget);
-    const equipo = tipo === "__otro" ? otro.trim() : tipo;
+    const equipo = tipo;
     const descripcion = String(fd.get("descripcion") ?? "").trim();
     const serie = sinSerie ? "" : String(fd.get("serie") ?? "").trim();
     const faltan: string[] = [];
@@ -132,12 +131,9 @@ export default function FormEquipoCenso({ sucursalId, sucursal, equipos, esAdmin
         <select id="c-tipo" value={tipo} onChange={(e) => setTipo(e.target.value)}>
           <option value="">Elige el tipo</option>
           {equipos.map((x) => <option key={x}>{x}</option>)}
-          <option value="__otro">Otro (escribir)…</option>
         </select>
+        <small className="hint">Si el equipo no está en la lista, avisa a Mantenimiento: solo se registran los tipos del catálogo.</small>
       </label>
-      {tipo === "__otro" && (
-        <label className="field">¿Qué equipo es?<input id="c-otro" value={otro} onChange={(e) => setOtro(e.target.value)} placeholder="Ej. Freidora, licuadora, máquina de hielo" /></label>
-      )}
       <label className="field">
         Descripción breve
         <input id="c-desc" name="descripcion" placeholder="Ej. Refri vertical junto a caja, puerta de vidrio" autoComplete="off" />

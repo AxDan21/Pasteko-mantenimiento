@@ -17,7 +17,7 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
   const [{ data: a }, { data: suc }, { data: eqs }, { data: prov }, acum] = await Promise.all([
     supabase.from("activos").select("*").order("id"),
     supabase.from("sucursales").select("id, nombre, zona").order("zona").order("nombre"),
-    supabase.from("equipos").select("nombre").order("orden"),
+    supabase.from("equipos").select("nombre").eq("vigente", true).order("orden"),
     supabase.from("proveedores").select("id, nombre").eq("activo", true).order("nombre"),
     acumuladoPorActivo(supabase),
   ]);
