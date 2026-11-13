@@ -3,8 +3,8 @@
  * con el motor del Gantt (lib/gantt). Sin servidor: lo usan las páginas y las acciones.
  */
 import {
-  areasDe, avisos, calcular, holguras, PASO, PLANTILLA, riesgo,
-  type Captura, type Config, type EstadoPaso,
+  areasDe, avisos, calcular, corto, dependientesDe, faseDe, holguras, instalacionEnObra, PASO, PLANTILLA, riesgo,
+  type Captura, type Config, type EstadoPaso, type FaseClave,
 } from "@/lib/gantt";
 import { diasEntre } from "@/lib/panel";
 
@@ -34,6 +34,9 @@ export type Fila = {
   depende: string;
   /** duración capturada a mano (null = la de la plantilla o la configuración) */
   dur_manual: number | null;
+  fase: FaseClave;
+  /** pasos que se recorren si este se mueve */
+  mueve: string;
 };
 
 export type Vista = {
@@ -42,6 +45,10 @@ export type Vista = {
   hechos: number; total: number; vencidos: number; bloqueados: number;
   semaforo: { texto: string; clase: "ok" | "warn" | "bad" | "neutral" };
   siguiente: Fila | null;
+  /** % de la obra en el que cae la instalación */
+  instalacionPct: number | null;
+  /** fase en curso según la fecha: 0 compras · 1 obra · 2 equipo · 3 capacitación · 4 apertura */
+  faseActual: number;
 };
 
 export const configDe = (ap: ApRow): Config => ({
@@ -62,6 +69,11 @@ function textoDeps(clave: string) {
       return `${d.ancla === "inicio" ? "inicio de " : ""}${otro} + ${dias}`;
     })
     .join(" · ");
+}
+
+function textoMueve(clave: string) {
+  const ds = dependientesDe(clave).map((k) => corto(PASO.get(k)?.actividad ?? k));
+  return ds.length ? ds.join(", ") : "Nada";
 }
 
 /** Arma la vista completa de una apertura (modelo con dependencias). */
@@ -88,7 +100,7 @@ export function vistaApertura(ap: ApRow, items: ItemRow[], hoy: string): Vista {
       holgura: h, critica: h !== null && h <= 0,
       atraso: estado !== "hecho" && c.fin < hoy ? diasEntre(c.fin, hoy) : 0,
       desvio: it?.fecha_base ? diasEntre(it.fecha_base, c.fin) : 0,
-      depende: textoDeps(p.clave), dur_manual: it?.duracion ?? null,
+      depende: textoDeps(p.clave), dur_manual: it?.duracion ?? null, fase: faseDe(p.clave), mueve: textoMueve(p.clave),
     });
   }
   // Pasos extra capturados a mano (sin dependencias), al final y por fecha
@@ -99,7 +111,7 @@ export function vistaApertura(ap: ApRow, items: ItemRow[], hoy: string): Vista {
       inicio: it.fecha!, fin: it.fecha!, duracion: 0, hito: null, post: false, estado: it.estado, motivo: it.motivo,
       fecha_real: it.fecha_real, fecha_fija: null, fecha_base: it.fecha_base, holgura: null, critica: false,
       atraso: it.estado !== "hecho" && it.fecha! < hoy ? diasEntre(it.fecha!, hoy) : 0,
-      desvio: 0, depende: "Paso extra (fecha manual)", dur_manual: null,
+      desvio: 0, depende: "Paso extra (fecha manual)", dur_manual: null, fase: "extra", mueve: "Nada",
     });
   }
 
@@ -120,8 +132,18 @@ export function vistaApertura(ap: ApRow, items: ItemRow[], hoy: string): Vista {
   return {
     ap, cfg, filas, avisos: avisos(plan), aperturaPlan, aperturaProyectada: r.proyectada ?? aperturaPlan, meta,
     riesgo: r.dias, hechos, total: filas.length, vencidos, bloqueados, semaforo,
+    instalacionPct: instalacionEnObra(plan),
+    faseActual: faseActual(plan, hoy, ap.cerrada),
     siguiente: filas.filter((f) => f.estado !== "hecho").sort((a, b) => a.fin.localeCompare(b.fin))[0] ?? null,
   };
+}
+
+export const NOMBRES_FASE_ACTUAL = ["Compras", "Obra", "Equipo", "Capacitación", "Apertura"];
+function faseActual(plan: ReturnType<typeof calcular>, hoy: string, cerrada: boolean) {
+  if (cerrada) return 5;
+  const lim = [plan.obra?.inicio, plan.instalacion?.fin, plan.cap_core?.fin, plan.apertura?.fin];
+  const i = lim.findIndex((f) => f && hoy < f);
+  return i === -1 ? 4 : i;
 }
 
 /** Texto corto del vencimiento: "Vencido 3 d", "Hoy", "En 4 d". */

@@ -20,6 +20,11 @@ export default function AperturasTabs({ admin }: { admin: boolean }) {
             {label}
           </Link>
         ))}
+        {admin && (
+          <Link href="/aperturas/nueva" aria-current={path === "/aperturas/nueva" ? "page" : undefined}>
+            + Nueva apertura
+          </Link>
+        )}
       </div>
     </nav>
   );

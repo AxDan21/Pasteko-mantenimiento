@@ -76,7 +76,7 @@ export async function crearApertura(f: FormData) {
   const supabase = await db();
   const pago = fecha(txt(f, "fecha_pago"));
   const nombre = txt(f, "nombre");
-  if (!nombre || !pago) redirect("/aperturas?error=Falta el nombre o la fecha de pago de equipos");
+  if (!nombre || !pago) redirect("/aperturas/nueva?error=Falta el nombre o la fecha de pago de equipos");
   const { data, error } = await supabase
     .from("aperturas")
     .insert({
@@ -86,7 +86,7 @@ export async function crearApertura(f: FormData) {
     })
     .select("id")
     .single();
-  if (error || !data) redirect(`/aperturas?error=${encodeURIComponent(error?.message ?? "No se pudo crear")}`);
+  if (error || !data) redirect(`/aperturas/nueva?error=${encodeURIComponent(error?.message ?? "No se pudo crear")}`);
   await recalcular(supabase, data.id, true);
   refrescar();
   redirect(`/aperturas/${data.id}`);

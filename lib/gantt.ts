@@ -51,6 +51,39 @@ export const PLANTILLA: PasoPlantilla[] = [
 ];
 export const PASO = new Map(PLANTILLA.map((p) => [p.clave, p]));
 
+// ---------- Fases (agrupan los pasos y les dan color) ----------
+export type FaseClave = "compras" | "obra" | "equipo" | "mkt" | "cap" | "ap" | "extra";
+export const FASES: Record<FaseClave, { nombre: string; color: string }> = {
+  compras: { nombre: "Compras y proveedor", color: "#2f6fdb" },
+  obra: { nombre: "Obra", color: "#fd7a0f" },
+  equipo: { nombre: "Equipo y sistemas", color: "#7a4fd6" },
+  mkt: { nombre: "Marketing", color: "#c2337a" },
+  cap: { nombre: "Capacitación", color: "#0f8a7e" },
+  ap: { nombre: "Apertura", color: "#6b625a" },
+  extra: { nombre: "Pasos extra", color: "#9a928a" },
+};
+export const ORDEN_FASES: FaseClave[] = ["compras", "obra", "equipo", "mkt", "cap", "ap", "extra"];
+const FASE_DE: Record<string, FaseClave> = {
+  pago: "compras", kickoff: "compras", entrega_corp: "compras", barradas: "compras",
+  obra: "obra",
+  instalacion: "equipo", pos: "equipo", validacion: "equipo",
+  alta_digital: "mkt", rrss: "mkt", brandeo: "mkt", inauguracion: "mkt",
+  cap_virtual: "cap", cap_core: "cap", cap_bebidas: "cap", fin_capacitacion: "cap",
+  llave: "ap", primer_pedido: "ap", apertura: "ap",
+};
+export const faseDe = (clave: string | null): FaseClave => (clave ? FASE_DE[clave] ?? "extra" : "extra");
+/** Nombre corto de una actividad (sin el detalle después de " · "). */
+export const corto = (actividad: string) => actividad.split(" · ")[0];
+/** Pasos que dependen directamente de `clave`. */
+export const dependientesDe = (clave: string) => PLANTILLA.filter((p) => p.deps.some((d) => d.paso === clave)).map((p) => p.clave);
+
+/** En qué porcentaje de la obra cae la instalación de equipo (lo ideal: cerca de la mitad). */
+export function instalacionEnObra(calc: Record<string, { inicio: string; fin: string; duracion: number }>) {
+  const o = calc.obra, i = calc.instalacion;
+  if (!o || !i || o.duracion <= 0) return null;
+  return Math.round((diasEntre(o.inicio, i.fin) / o.duracion) * 100);
+}
+
 export type Config = { tipo: string; fecha_pago: string; dias_obra: number; dias_proveedor: number; lleva_bebidas: boolean };
 export type EstadoPaso = "pendiente" | "en_proceso" | "bloqueado" | "hecho";
 export type Captura = { duracion?: number | null; fecha_fija?: string | null; estado?: EstadoPaso | string | null; fecha_real?: string | null };
