@@ -1,13 +1,13 @@
 import Link from "next/link";
 import CopiarTexto from "@/components/CopiarTexto";
-import LectorCfdi from "@/components/LectorCfdi";
+import RegistroCfdi from "@/components/RegistroCfdi";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { enlaces, leerAjustes } from "@/lib/datos";
 import { mxn } from "@/lib/format";
 import { CATEGORIAS_EXTRA, diasEntre, fCorta, hoy, mesValido, nombreMes, rangoFechas } from "@/lib/panel";
 import type { Gasto, GastoV } from "@/lib/types";
-import { borrarGasto, crearGasto, guardarAjustes, marcarPagos } from "../acciones-modulos";
+import { borrarGasto, guardarAjustes, marcarPagos } from "../acciones-modulos";
 
 const ORIGEN: Record<string, [string, string]> = { hoja: ["Hoja de servicio", "neutral"], gasto: ["Gasto", "warn"], caja: ["Caja chica", "ok"] };
 type F = { mes?: string; zona?: string; pago?: string; ok?: string; error?: string };
@@ -22,15 +22,16 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
 
   let q = supabase.from("v_gastos").select("*").gte("fecha", ini).lt("fecha", fin).order("fecha", { ascending: false });
   if (f.zona) q = q.eq("zona", f.zona);
-  const [ajustes, { data: v }, { data: pend }, { data: gm }, { data: suc }, { data: eqs }, { data: prov }, { data: act }] = await Promise.all([
+  const [ajustes, { data: v }, { data: pend }, { data: gm }, { data: suc }, { data: eqs }, { data: prov }, { data: act }, { data: hist }] = await Promise.all([
     leerAjustes(supabase),
     q,
     supabase.from("v_gastos").select("*").eq("pagado", false).order("fecha"),
     supabase.from("gastos").select("id, factura_path").gte("fecha", ini).lt("fecha", fin),
     supabase.from("sucursales").select("id, nombre, zona").order("zona").order("nombre"),
-    supabase.from("equipos").select("categoria").eq("vigente", true).order("orden"),
+    supabase.from("equipos").select("nombre, categoria").eq("vigente", true).order("orden"),
     supabase.from("proveedores").select("id, nombre").eq("activo", true).order("nombre"),
     supabase.from("activos").select("id").eq("activo", true).order("id"),
+    supabase.from("gastos").select("concepto, categoria").order("creado", { ascending: false }).limit(500),
   ]);
   const delMes = (v ?? []) as GastoV[];
   const filas = f.pago === "Pendiente" ? delMes.filter((x) => !x.pagado) : f.pago === "Pagado" ? delMes.filter((x) => x.pagado) : delMes;
@@ -86,38 +87,16 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
       <div className="panel-grid" style={{ marginBottom: 16 }}>
         <section className="card">
           <h3>Registrar gasto</h3>
-          <p className="sub">Facturas de proveedores, compras y servicios. Las hojas de servicio y la caja chica se suman solas.</p>
-          <form action={crearGasto} className="inline-form">
-            <LectorCfdi proveedores={((prov ?? []) as { id: number; nombre: string }[])} categorias={categorias} />
-            <label className="field">Fecha del trabajo<input id="g-fecha" name="fecha" type="date" required defaultValue={h} /></label>
-            <label className="field">Sucursal
-              <select id="g-suc" name="sucursal_id" defaultValue="">
-                <option value="">General / varias</option>
-                {zonas.map((z) => <optgroup key={z} label={z}>{sucursales.filter((s) => s.zona === z).map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}</optgroup>)}
-              </select>
-            </label>
-            <label className="field">Categoría
-              <select id="g-cat" name="categoria" defaultValue={categorias[0]}>{categorias.map((c) => <option key={c}>{c}</option>)}</select>
-            </label>
-            <label className="field">Tipo
-              <select id="g-tipo" name="tipo" defaultValue="Correctivo"><option>Correctivo</option><option>Preventivo</option><option>Otro</option></select>
-            </label>
-            <label className="field w2">Concepto<input id="g-con" name="concepto" required placeholder="Ej. Cambio de compresor" /></label>
-            <label className="field">Monto (MXN)<input id="g-monto" name="monto" type="number" min="0.01" step="0.01" required /></label>
-            <label className="field">Proveedor
-              <select id="g-prov" name="proveedor_id" defaultValue=""><option value="">Ninguno</option>{(prov ?? []).map((p) => <option key={p.id as number} value={p.id as number}>{p.nombre as string}</option>)}</select>
-            </label>
-            <label className="field">Activo (opcional)
-              <select id="g-act" name="activo_id" defaultValue=""><option value="">Ninguno</option>{(act ?? []).map((a) => <option key={a.id as string}>{a.id as string}</option>)}</select>
-            </label>
-            <label className="field">Estado de pago
-              <select id="g-pag" name="pagado" defaultValue="false"><option value="false">Pendiente de pago</option><option value="true">Pagado</option></select>
-            </label>
-            <label className="field">Fecha de pago (si ya se pagó)<input id="g-fpago" name="fecha_pago" type="date" /></label>
-            <label className="field">Referencia de pago<input id="g-ref" name="referencia_pago" placeholder="Transferencia, cheque…" /></label>
-            <label className="field w2">Factura en PDF o foto (opcional)<input id="g-fac" name="factura" type="file" accept="image/*,application/pdf" /></label>
-            <button className="btn primary" type="submit">Registrar</button>
-          </form>
+          <p className="sub">Con el XML de la factura. Las hojas de servicio y la caja chica se suman solas.</p>
+          <RegistroCfdi
+            hoy={h}
+            proveedores={(prov ?? []) as { id: number; nombre: string }[]}
+            sucursales={sucursales}
+            activos={(act ?? []).map((x) => x.id as string)}
+            categorias={categorias}
+            equipos={(eqs ?? []) as { nombre: string; categoria: string }[]}
+            historial={(hist ?? []) as { concepto: string; categoria: string }[]}
+          />
         </section>
         <section className="card">
           <h3>Presupuesto de {nombreMes(mes)}</h3>

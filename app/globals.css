@@ -814,3 +814,31 @@ a.ax-lane:hover .ax-lane-name b { color: var(--brand); }
   .cfdi-partida .cfdi-desc { grid-column: 2 / -1; }
   .cfdi-partida .cfdi-monto { grid-column: 2 / -1; flex-direction: row; justify-content: space-between; align-items: baseline; padding: 0; }
 }
+/* Registro por XML (único método de captura) */
+.cfdi { gap: 14px; margin-top: 10px; }
+.cfdi-drop.big { flex-direction: column; text-align: center; padding: 34px 20px; gap: 10px; }
+.cfdi-drop.big > span { align-items: center; }
+.cfdi-drop.big b { font-size: 17px; }
+.cfdi-otro { position: relative; cursor: pointer; }
+.cfdi-otro input { display: none; }
+.cfdi-uno, .cfdi-comun { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; align-items: start; }
+.cfdi-w2 { grid-column: span 2; } .cfdi-w3 { grid-column: span 2; }
+.cfdi-uno .cfdi-w3 { grid-column: 1 / -1; }
+.cfdi-comun { padding-top: 14px; border-top: 1px solid var(--line); }
+.cfdi-sug { display: inline-block; margin-top: 4px; font-size: 11px; font-weight: 700; line-height: 1.3; padding: 2px 8px; border-radius: 6px; }
+.cfdi-sug.alta { background: var(--ok-soft); color: var(--ok); }
+.cfdi-sug.media { background: var(--info-soft); color: var(--info); }
+.cfdi-sug.baja { background: var(--warn-soft); color: var(--warn); }
+.cfdi-sug.manual { background: var(--surface-2); color: var(--muted); }
+.cfdi-partida .field { align-self: start; }
+.cfdi-partida { align-items: start; }
+.cfdi-partida .cfdi-n { margin-top: 26px; }
+.cfdi-partida .cfdi-monto { padding: 22px 0 0; }
+.cfdi-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.cfdi-submit { min-height: 48px; padding: 0 22px; border-radius: 12px; border: 0; background: var(--orange); color: var(--on-orange); font: inherit; font-weight: 800; font-size: 16px; cursor: pointer; box-shadow: var(--shadow-1); }
+.cfdi-submit:disabled { opacity: .6; cursor: progress; }
+@media (max-width: 760px) {
+  .cfdi-uno, .cfdi-comun { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cfdi-submit { width: 100%; }
+}
+@media (max-width: 760px) { .cfdi-partida .cfdi-n { margin-top: 0; } .cfdi-partida .cfdi-monto { padding: 0; } }
