@@ -16,12 +16,17 @@ export default async function Inicio() {
   return (
     <>
       <Header items={[{ href: "/login", label: "Acceso técnicos" }]} />
-      <main className="wrap">
+      <main className="wrap pt">
         <BuscadorEquipos
           equipos={(equipos ?? []) as Equipo[]}
           faqs={(faqs ?? []) as Pick<Faq, "id" | "equipo_id" | "pregunta" | "pasos">[]}
           videos={(videos ?? []) as Pick<Video, "id" | "equipo_id" | "titulo">[]}
+          osticket={process.env.NEXT_PUBLIC_OSTICKET_URL}
         />
+        <footer className="pt-foot">
+          <span>Pasteko · Mantenimiento</span>
+          <span>Hecho para que la tienda no se detenga.</span>
+        </footer>
       </main>
     </>
   );
