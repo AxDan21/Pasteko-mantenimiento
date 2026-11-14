@@ -762,3 +762,29 @@ a.ax-lane:hover .ax-lane-name b { color: var(--brand); }
   .gx-chart, .ax-card, .ax-ap { box-shadow: none; }
   .gx-bar, .gx-diamond, .gx-group { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Lector de XML (CFDI) en Registrar gasto */
+.cfdi { display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
+.cfdi-drop { display: flex; align-items: center; gap: 14px; padding: 16px; border: 2px dashed color-mix(in srgb, var(--orange) 55%, var(--line)); border-radius: 14px; background: color-mix(in srgb, var(--orange) 5%, var(--surface)); color: var(--brand); cursor: pointer; transition: background .15s ease, border-color .15s ease; position: relative; }
+.cfdi-drop:hover, .cfdi-drop.on { background: color-mix(in srgb, var(--orange) 12%, var(--surface)); border-color: var(--orange); }
+.cfdi-drop:focus-within { outline: 3px solid var(--orange); outline-offset: 2px; }
+.cfdi-drop > span { display: flex; flex-direction: column; color: var(--ink); }
+.cfdi-drop small { color: var(--muted); font-size: 13px; font-weight: 400; }
+.cfdi-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.cfdi-res { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: 10px; }
+.cfdi-res-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.cfdi-dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.cfdi-dl > div { background: var(--surface); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+.cfdi-dl .w2 { grid-column: span 2; }
+.cfdi-dl dt { font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.cfdi-dl dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cfdi-dl dd small { display: block; font-weight: 400; font-size: 12px; color: var(--muted); }
+.cfdi-dl .tot { background: var(--brand-soft); } .cfdi-dl .tot dd { color: var(--brand); font-size: 18px; }
+.cfdi-con summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--brand); }
+.cfdi-con ul { list-style: none; margin: 8px 0 0; padding: 0; font-size: 13px; }
+.cfdi-con li { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-top: 1px solid var(--line); }
+.cfdi-uuid { margin: 0; font-family: var(--f-mono), monospace; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.cfdi-hint { margin: 0; font-size: 13px; color: var(--muted); }
+.cfdi .note { margin: 0; }
+.cfdi-lleno { box-shadow: 0 0 0 3px color-mix(in srgb, var(--orange) 45%, transparent) !important; transition: box-shadow .3s ease; }
+@media (max-width: 900px) { .cfdi-dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

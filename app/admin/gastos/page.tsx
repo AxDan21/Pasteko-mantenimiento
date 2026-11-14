@@ -1,5 +1,6 @@
 import Link from "next/link";
 import CopiarTexto from "@/components/CopiarTexto";
+import LectorCfdi from "@/components/LectorCfdi";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { enlaces, leerAjustes } from "@/lib/datos";
@@ -87,6 +88,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
           <h3>Registrar gasto</h3>
           <p className="sub">Facturas de proveedores, compras y servicios. Las hojas de servicio y la caja chica se suman solas.</p>
           <form action={crearGasto} className="inline-form">
+            <LectorCfdi proveedores={((prov ?? []) as { id: number; nombre: string }[])} />
             <label className="field">Fecha del trabajo<input id="g-fecha" name="fecha" type="date" required defaultValue={h} /></label>
             <label className="field">Sucursal
               <select id="g-suc" name="sucursal_id" defaultValue="">
@@ -113,7 +115,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
             </label>
             <label className="field">Fecha de pago (si ya se pagó)<input id="g-fpago" name="fecha_pago" type="date" /></label>
             <label className="field">Referencia de pago<input id="g-ref" name="referencia_pago" placeholder="Transferencia, cheque…" /></label>
-            <label className="field w2">Factura (foto o PDF)<input id="g-fac" name="factura" type="file" accept="image/*,application/pdf" /></label>
+            <label className="field w2">Factura en PDF o foto (opcional)<input id="g-fac" name="factura" type="file" accept="image/*,application/pdf" /></label>
             <button className="btn primary" type="submit">Registrar</button>
           </form>
         </section>
