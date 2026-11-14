@@ -179,14 +179,13 @@ export default function MapaSucursales({ sucursales, tecnicos }: { sucursales: P
                 {actual.cercanos.length ? (
                   <ol>{actual.cercanos.map((c) => <li key={c.nombre}><span>{c.nombre}</span><span className="num">~{c.km} km</span></li>)}</ol>
                 ) : (
-                  <p className="sub" style={{ margin: 0 }}>Captura la base de tus técnicos en <Link href="/admin/sucursales#tecnicos">Sucursales</Link>.</p>
+                  <p className="sub" style={{ margin: 0 }}>Falta la base de los técnicos (tabla perfiles: base_lat y base_lng).</p>
                 )}
               </div>
 
               <div className="mapa-links">
                 <a href={enlaceMaps(actual)} target="_blank" rel="noopener noreferrer">Ver en Google Maps</a>
                 <Link href={`/admin/supervisores?zona=${encodeURIComponent(actual.zona)}`}>Pendientes de la zona</Link>
-                <Link href={`/admin/sucursales?s=${actual.id}#s${actual.id}`}>Corregir ubicación</Link>
               </div>
             </div>
           ) : (

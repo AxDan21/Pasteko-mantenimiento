@@ -1,176 +1,83 @@
+import MapaSucursales, { type PinSucursal, type PinTecnico } from "@/components/MapaSucursales";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { distanciaKm, enlaceMaps, enMexico, kmCarretera, type Punto } from "@/lib/geo";
-import { fCorta } from "@/lib/panel";
-import { guardarBase, guardarUbicacion, quitarUbicacion } from "./actions";
+import { kmCarretera } from "@/lib/geo";
+import { fCorta, hoy, mesActual, rangoFechas, sumarDias } from "@/lib/panel";
 
 export const metadata = { title: "Sucursales · Pasteko" };
 
-type Suc = {
-  id: number; nombre: string; zona: string; supervisor: string | null; direccion: string | null;
-  lat: number | null; lng: number | null; ubicacion_fuente: string | null; ubicacion_precision: number | null; ubicacion_fecha: string | null;
-};
-type Tec = { id: string; nombre: string; zona: string | null; rol: string; base_nombre: string | null; base_lat: number | null; base_lng: number | null };
-
-const MSG: Record<string, string> = {
-  suc: "Ubicación guardada.",
-  "suc-fuera": "Ubicación guardada, pero cae fuera de México: revisa que las coordenadas estén bien (latitud primero, luego longitud).",
-  quitada: "Ubicación quitada.",
-  base: "Base del técnico guardada.",
-};
-const FUENTE: Record<string, string> = { gps: "GPS en tienda", maps: "Google Maps", manual: "Coordenadas" };
-const punto = (lat: number | null, lng: number | null): Punto | null => (lat != null && lng != null ? { lat, lng } : null);
-
-export default async function Sucursales({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string; s?: string }> }) {
+export default async function Sucursales() {
   await requireAdmin();
-  const f = await searchParams;
   const supabase = await createClient();
-  const [{ data: s }, { data: t }] = await Promise.all([
-    supabase.from("sucursales").select("id, nombre, zona, supervisor, direccion, lat, lng, ubicacion_fuente, ubicacion_precision, ubicacion_fecha").eq("activa", true).order("zona").order("nombre"),
-    supabase.from("perfiles").select("id, nombre, zona, rol, base_nombre, base_lat, base_lng").eq("rol", "tecnico").eq("activo", true).order("nombre"),
-  ]);
-  const sucursales = (s ?? []) as Suc[];
-  const tecnicos = (t ?? []) as Tec[];
-  const zonas = Array.from(new Set(sucursales.map((x) => x.zona)));
-  const conUbi = sucursales.filter((x) => x.lat != null).length;
-  const conBase = tecnicos.filter((x) => x.base_lat != null).length;
-  const pct = sucursales.length ? Math.round((conUbi / sucursales.length) * 100) : 0;
+  const h = hoy(), en7 = sumarDias(h, 7);
+  const [ini, fin] = rangoFechas(mesActual());
 
-  // Técnico más cercano a cada tienda (ya se puede ver en cuanto haya bases)
-  const bases = tecnicos.map((x) => ({ x, p: punto(x.base_lat, x.base_lng) })).filter((b): b is { x: Tec; p: Punto } => !!b.p);
-  const cercano = (p: Punto) => bases.map((b) => ({ ...b, km: kmCarretera(b.p, p) })).sort((a, b) => a.km - b.km)[0] ?? null;
+  const [{ data: s }, { data: t }, { data: p }, { data: hs }, { data: a }, { data: g }] = await Promise.all([
+    supabase.from("sucursales").select("id, nombre, zona, supervisor, direccion, lat, lng").eq("activa", true).order("nombre"),
+    supabase.from("perfiles").select("id, nombre, base_nombre, base_lat, base_lng").eq("rol", "tecnico").eq("activo", true),
+    supabase.from("preventivos").select("sucursal_id, fecha, tarea, equipo").eq("hecho", false).lte("fecha", en7).order("fecha"),
+    supabase.from("hojas_servicio").select("sucursal_id, creada, equipo").order("creada", { ascending: false }).limit(2000),
+    supabase.from("activos").select("sucursal_id").eq("activo", true),
+    supabase.from("v_gastos").select("sucursal_id, monto").gte("fecha", ini).lt("fecha", fin),
+  ]);
+
+  const tecnicos: PinTecnico[] = ((t ?? []) as { id: string; nombre: string; base_nombre: string | null; base_lat: number | null; base_lng: number | null }[])
+    .filter((x) => x.base_lat != null && x.base_lng != null)
+    .map((x) => ({ id: x.id, nombre: x.nombre, base: x.base_nombre ?? "", lat: x.base_lat!, lng: x.base_lng! }));
+
+  const prevs = (p ?? []) as { sucursal_id: number; fecha: string; tarea: string; equipo: string }[];
+  const hojas = (hs ?? []) as { sucursal_id: number; creada: string; equipo: string }[];
+  const equipos = new Map<number, number>();
+  ((a ?? []) as { sucursal_id: number }[]).forEach((x) => equipos.set(x.sucursal_id, (equipos.get(x.sucursal_id) ?? 0) + 1));
+  const gasto = new Map<number, number>();
+  ((g ?? []) as { sucursal_id: number | null; monto: number }[]).forEach((x) => { if (x.sucursal_id) gasto.set(x.sucursal_id, (gasto.get(x.sucursal_id) ?? 0) + Number(x.monto)); });
+
+  const todas = (s ?? []) as { id: number; nombre: string; zona: string; supervisor: string | null; direccion: string | null; lat: number | null; lng: number | null }[];
+  const pins: PinSucursal[] = todas.filter((x) => x.lat != null && x.lng != null).map((x) => {
+    const mias = prevs.filter((pr) => pr.sucursal_id === x.id);
+    const vencidos = mias.filter((pr) => pr.fecha < h);
+    const proximos = mias.filter((pr) => pr.fecha >= h);
+    const ultima = hojas.find((hj) => hj.sucursal_id === x.id);
+    const punto = { lat: x.lat!, lng: x.lng! };
+    return {
+      id: x.id, nombre: x.nombre, zona: x.zona, supervisor: x.supervisor, direccion: x.direccion, ...punto,
+      estado: vencidos.length ? "rojo" : proximos.length ? "amarillo" : "verde",
+      vencidos: vencidos.map((pr) => `${pr.tarea} · ${pr.equipo} (${fCorta(pr.fecha)})`),
+      proximos: proximos.map((pr) => `${pr.tarea} · ${pr.equipo} (${fCorta(pr.fecha)})`),
+      ultimaVisita: ultima ? `${fCorta(ultima.creada.slice(0, 10))} · ${ultima.equipo}` : null,
+      equipos: equipos.get(x.id) ?? 0,
+      gastoMes: gasto.get(x.id) ?? 0,
+      cercanos: tecnicos.map((tc) => ({ nombre: tc.nombre, km: kmCarretera(tc, punto) })).sort((m, n) => m.km - n.km).slice(0, 3),
+    };
+  });
+  const sinUbicacion = todas.filter((x) => x.lat == null || x.lng == null);
 
   return (
-    <main className="wrap">
+    <main className="wrap mapa-page">
       <div className="head-row">
         <div>
-          <p className="eyebrow">Ubicaciones</p>
-          <h1 className="page-h">Sucursales y técnicos</h1>
-          <p className="sub" style={{ margin: 0 }}>La base para el mapa, el técnico más cercano y las rutas de preventivos.</p>
+          <p className="eyebrow">Mapa</p>
+          <h1 className="page-h">Sucursales</h1>
+          <p className="sub" style={{ margin: 0 }}>
+            {pins.length} de {todas.length} sucursales en el mapa · {tecnicos.length} técnico{tecnicos.length !== 1 ? "s" : ""} con base
+          </p>
         </div>
       </div>
 
-      {f.ok && MSG[f.ok] && <div className={`note ${f.ok === "suc-fuera" ? "warn" : "ok"}`} style={{ marginBottom: 14 }}>{MSG[f.ok]}</div>}
-      {f.error && <div className="note bad" style={{ marginBottom: 14 }}>{f.error}</div>}
+      {sinUbicacion.length > 0 && (
+        <div className="note warn" style={{ marginBottom: 14 }}>
+          Faltan {sinUbicacion.length} sucursal{sinUbicacion.length !== 1 ? "es" : ""} sin ubicación: {sinUbicacion.slice(0, 6).map((x) => x.nombre).join(", ")}{sinUbicacion.length > 6 ? "…" : ""}. Agrega su latitud y longitud en la tabla <code>sucursales</code> de Supabase.
+        </div>
+      )}
 
-      <div className="kpis">
-        <div className="kpi">
-          <span className="eyebrow">Sucursales ubicadas</span>
-          <span className="v">{conUbi}<span style={{ fontSize: 16, color: "var(--muted)" }}> de {sucursales.length}</span></span>
-          <div className="bar"><i style={{ width: `${pct}%` }} /></div>
+      {pins.length ? (
+        <MapaSucursales sucursales={pins} tecnicos={tecnicos} />
+      ) : (
+        <div className="card">
+          <h3>Todavía no hay sucursales con ubicación</h3>
+          <p className="sub">Agrega la latitud y longitud de tus tiendas (tabla <code>sucursales</code>) y la base de tus técnicos (tabla <code>perfiles</code>: <code>base_lat</code>, <code>base_lng</code>) en Supabase; aparecerán aquí al instante.</p>
         </div>
-        <div className="kpi">
-          <span className="eyebrow">Técnicos con base</span>
-          <span className="v">{conBase}<span style={{ fontSize: 16, color: "var(--muted)" }}> de {tecnicos.length}</span></span>
-          <span className="s">Ciudad o colonia, no su domicilio</span>
-        </div>
-        <div className="kpi">
-          <span className="eyebrow">Con GPS de supervisor</span>
-          <span className="v">{sucursales.filter((x) => x.ubicacion_fuente === "gps").length}</span>
-          <span className="s">La más exacta: tomada en la tienda</span>
-        </div>
-        <div className="kpi">
-          <span className="eyebrow">Zonas</span>
-          <span className="v">{zonas.length}</span>
-          <span className="s">{zonas.map((z) => `${z.replace(/^Zona\s*\d+\s*·\s*/i, "")} ${sucursales.filter((x) => x.zona === z && x.lat != null).length}/${sucursales.filter((x) => x.zona === z).length}`).join(" · ")}</span>
-        </div>
-      </div>
-
-      <details className="card ubi-ayuda">
-        <summary><b>¿Cómo saco la ubicación de Google Maps?</b></summary>
-        <ol>
-          <li><b>Opción rápida (en la computadora):</b> busca la tienda en Google Maps, dale <b>clic derecho sobre el pin</b> y da clic en las coordenadas que aparecen hasta arriba (por ejemplo <code>20.1234, -98.7654</code>): se copian solas. Pégalas aquí.</li>
-          <li><b>Con el enlace:</b> en Maps toca <b>Compartir → Copiar vínculo</b> y pégalo aquí. Funciona con enlaces cortos (maps.app.goo.gl) y largos.</li>
-          <li><b>La más exacta:</b> pide al supervisor que, estando en la tienda, toque <b>“Estoy en la tienda: guardar ubicación”</b> en su pantalla del censo.</li>
-        </ol>
-      </details>
-
-      {zonas.map((z) => {
-        const lista = sucursales.filter((x) => x.zona === z);
-        return (
-          <section key={z} className="card ubi-zona">
-            <div className="ubi-zona-head">
-              <h3>{z}</h3>
-              <span className="sub">{lista.find((x) => x.supervisor)?.supervisor ?? "Sin supervisor"} · {lista.filter((x) => x.lat != null).length} de {lista.length} ubicadas</span>
-            </div>
-            <ul className="ubi-list">
-              {lista.map((x) => {
-                const p = punto(x.lat, x.lng);
-                const c = p ? cercano(p) : null;
-                return (
-                  <li key={x.id} id={`s${x.id}`} className={f.s === String(x.id) ? "flash" : undefined}>
-                    <div className="ubi-name">
-                      <span className={`ubi-dot ${p ? (enMexico(p) ? "ok" : "warn") : ""}`} aria-hidden="true" />
-                      <span>
-                        <b>{x.nombre}</b>
-                        {p ? (
-                          <small>
-                            {FUENTE[x.ubicacion_fuente ?? ""] ?? "Ubicada"}{x.ubicacion_precision ? ` ± ${x.ubicacion_precision} m` : ""}{x.ubicacion_fecha ? ` · ${fCorta(x.ubicacion_fecha.slice(0, 10))}` : ""}
-                            {" · "}<a href={enlaceMaps(p)} target="_blank" rel="noopener noreferrer">ver en Maps</a>
-                            {c && <> · técnico más cercano: <b>{c.x.nombre}</b> (~{c.km} km)</>}
-                          </small>
-                        ) : (
-                          <small className="ubi-falta">Sin ubicación</small>
-                        )}
-                        {x.direccion && <small>{x.direccion}</small>}
-                      </span>
-                    </div>
-                    <form action={guardarUbicacion} className="ubi-form">
-                      <input type="hidden" name="id" value={x.id} />
-                      <input name="ubicacion" required placeholder={p ? "Pega otro enlace o coordenadas para corregir" : "Pega enlace de Maps o coordenadas"} aria-label={`Ubicación de ${x.nombre}`} />
-                      <button className="btn small primary" type="submit">{p ? "Cambiar" : "Guardar"}</button>
-                    </form>
-                    {p && (
-                      <form action={quitarUbicacion} className="ubi-quitar">
-                        <input type="hidden" name="id" value={x.id} />
-                        <button className="link-btn" type="submit" title="Quitar ubicación">Quitar</button>
-                      </form>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        );
-      })}
-
-      <section className="card ubi-zona" id="tecnicos">
-        <div className="ubi-zona-head">
-          <h3>Base de cada técnico</h3>
-          <span className="sub">Escribe la ciudad o colonia desde donde sale (ej. “Tula de Allende, Hidalgo”). Se ubica sola en el mapa.</span>
-        </div>
-        {tecnicos.length ? (
-          <ul className="ubi-list">
-            {tecnicos.map((x) => {
-              const p = punto(x.base_lat, x.base_lng);
-              const cubre = p ? sucursales.filter((s2) => s2.lat != null && distanciaKm(p, { lat: s2.lat!, lng: s2.lng! }) * 1.3 <= 60).length : 0;
-              return (
-                <li key={x.id} id={`t-${x.id}`}>
-                  <div className="ubi-name">
-                    <span className={`ubi-dot ${p ? "ok" : ""}`} aria-hidden="true" />
-                    <span>
-                      <b>{x.nombre}</b>
-                      {p ? (
-                        <small>{x.base_nombre ?? "Base"} · <a href={enlaceMaps(p)} target="_blank" rel="noopener noreferrer">ver en Maps</a> · {cubre} sucursal{cubre !== 1 ? "es" : ""} a menos de 60 km</small>
-                      ) : (
-                        <small className="ubi-falta">Sin base{x.zona ? ` · ${x.zona}` : ""}</small>
-                      )}
-                    </span>
-                  </div>
-                  <form action={guardarBase} className="ubi-form tec">
-                    <input type="hidden" name="id" value={x.id} />
-                    <input name="base_nombre" defaultValue={x.base_nombre ?? ""} placeholder="Ciudad o colonia, estado" aria-label={`Base de ${x.nombre}`} />
-                    <input name="ubicacion" placeholder="Enlace o coordenadas (opcional)" aria-label={`Coordenadas de la base de ${x.nombre}`} />
-                    <button className="btn small primary" type="submit">Guardar</button>
-                  </form>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p className="sub">No hay técnicos activos. Dalos de alta en Técnicos y proveedores.</p>
-        )}
-      </section>
+      )}
     </main>
   );
 }

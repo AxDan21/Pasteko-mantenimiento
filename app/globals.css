@@ -887,50 +887,6 @@ a.ax-lane:hover .ax-lane-name b { color: var(--brand); }
 .pend-det > summary .chev { transition: transform .2s ease; color: var(--brand); }
 .pend-det[open] > summary .chev { transform: rotate(180deg); }
 
-/* Ubicaciones de sucursales y técnicos */
-.ubi-ayuda { margin-bottom: 16px; }
-.ubi-ayuda summary { cursor: pointer; }
-.ubi-ayuda ol { margin: 12px 0 0; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; line-height: 1.5; }
-.ubi-ayuda code { font-family: var(--f-mono), monospace; background: var(--surface-2); padding: 1px 6px; border-radius: 6px; }
-.ubi-zona { margin-bottom: 16px; }
-.ubi-zona-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
-.ubi-zona-head .sub { margin: 0; }
-.ubi-list { list-style: none; margin: 0; padding: 0; }
-.ubi-list li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 420px) auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); scroll-margin-top: 140px; }
-.ubi-list li.flash { animation: ubiflash 2s ease; }
-@keyframes ubiflash { 0%, 40% { background: var(--brand-soft); } 100% { background: transparent; } }
-.ubi-name { display: flex; gap: 10px; align-items: flex-start; min-width: 0; }
-.ubi-name > span:last-child { display: flex; flex-direction: column; min-width: 0; }
-.ubi-name small { color: var(--muted); font-size: 12px; line-height: 1.45; }
-.ubi-name small a { color: var(--brand); font-weight: 700; }
-.ubi-falta { color: var(--warn) !important; font-weight: 700; }
-.ubi-dot { width: 12px; height: 12px; border-radius: 50%; margin-top: 5px; flex: none; background: var(--line); box-shadow: inset 0 0 0 2px var(--surface); border: 2px solid var(--line); }
-.ubi-dot.ok { background: var(--ok); border-color: var(--ok); }
-.ubi-dot.warn { background: var(--warn); border-color: var(--warn); }
-.ubi-form { display: flex; gap: 6px; }
-.ubi-form input { flex: 1; min-width: 0; height: 38px; border: 1px solid var(--line); border-radius: 10px; padding: 0 10px; font: inherit; font-size: 14px; background: var(--surface); color: var(--ink); }
-.ubi-form.tec input[name="ubicacion"] { flex: .8; }
-.ubi-quitar { margin: 0; }
-.ubi-quitar .link-btn { color: var(--muted); font-size: 13px; }
-/* Botón de GPS del supervisor */
-.ubi-card { display: flex; flex-direction: column; gap: 12px; }
-.ubi-head { display: flex; gap: 12px; align-items: flex-start; }
-.ubi-ico { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; flex: none; background: var(--warn-soft); color: var(--warn); }
-.ubi-ico.ok { background: var(--ok-soft); color: var(--ok); }
-.ubi-head a { color: var(--brand); font-weight: 700; }
-.ubi-main { width: 100%; min-height: 48px; }
-.ubi-check { display: flex; flex-direction: column; gap: 10px; }
-.ubi-check p { margin: 0; font-size: 14px; }
-.ubi-btns { display: flex; gap: 8px; flex-wrap: wrap; }
-@media (max-width: 900px) {
-  .ubi-list li { grid-template-columns: minmax(0, 1fr) auto; }
-  .ubi-list li .ubi-form { grid-column: 1 / -1; grid-row: 2; }
-  .ubi-form.tec { flex-wrap: wrap; }
-  .ubi-form.tec input { flex-basis: 100%; }
-}
-.censo-ubi { color: var(--warn); font-weight: 700; }
-.censo-ubi.ok { color: var(--ok); }
-
 /* Mapa de sucursales */
 .llegar { font-size: 12px; font-weight: 700; color: var(--brand); text-decoration: none; }
 .mapa { display: flex; flex-direction: column; gap: 12px; }
@@ -997,4 +953,46 @@ a.ax-lane:hover .ax-lane-name b { color: var(--brand); }
   .mapa-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.88) saturate(.7); }
   .mapa-map .leaflet-control-attribution { background: rgba(20, 18, 16, .75); color: #bbb; }
   .mapa-map .leaflet-control-attribution a { color: #fdba7f; }
+}
+
+/* Plan inteligente de preventivos */
+.seg-mini { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--surface); }
+.seg-mini a { padding: 8px 14px; font-size: 13px; font-weight: 700; color: var(--muted); text-decoration: none; }
+.seg-mini a[aria-current="page"] { background: var(--orange); color: var(--on-orange); }
+.plan-h { font-size: 20px; font-weight: 800; margin: 22px 0 12px; }
+.plan-sug-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.plan-sug { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); border-left: 5px solid var(--warn); }
+.plan-sug.campana { border-left-color: var(--info, #2f6fdb); }
+.plan-sug-tag { align-self: flex-start; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px; border-radius: 6px; background: var(--warn-soft); color: var(--warn); }
+.plan-sug.campana .plan-sug-tag { background: var(--info-soft, #e3ecfb); color: var(--info, #2f6fdb); }
+.plan-sug small { color: var(--muted); font-size: 13px; line-height: 1.4; }
+.plan-sug-list { font-weight: 700; color: var(--ink) !important; }
+.plan-sug-form { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; gap: 6px; margin-top: 6px; }
+.plan-sug-form input { height: 38px; border: 1px solid var(--line); border-radius: 10px; padding: 0 10px; font: inherit; font-size: 13px; background: var(--surface); color: var(--ink); min-width: 0; }
+.plan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 16px; align-items: start; }
+.plan-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow-1, none); }
+.plan-card.urgente { border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.plan-card.lista { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.plan-card header { display: flex; gap: 12px; align-items: center; }
+.plan-card header > div { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.plan-card header small { color: var(--muted); font-size: 13px; }
+.plan-tec { width: 40px; height: 40px; border-radius: 12px; background: #141210; color: #fd7a0f; display: grid; place-items: center; font-weight: 800; font-size: 14px; border: 2px solid #fd7a0f; flex: none; }
+.plan-ruta { list-style: none; margin: 0; padding: 0 0 0 18px; position: relative; display: grid; gap: 10px; }
+.plan-ruta::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px; border-left: 2px dashed var(--line); }
+.plan-ruta > li { position: relative; display: flex; flex-direction: column; gap: 2px; }
+.plan-ruta > li::before { content: ""; position: absolute; left: -18px; top: 5px; width: 12px; height: 12px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 3px var(--surface); }
+.plan-ruta > li.base::before { background: var(--ink); border-radius: 3px; }
+.plan-ruta > li.base span { font-size: 13px; color: var(--muted); font-weight: 700; }
+.plan-km { font-size: 11px; font-weight: 800; color: var(--muted); }
+.plan-ruta ul { margin: 2px 0 0; padding-left: 16px; font-size: 13px; display: grid; gap: 2px; }
+.plan-ruta ul em { font-style: normal; color: var(--muted); font-size: 12px; }
+.plan-ruta ul li.venc em { color: var(--bad); font-weight: 700; }
+.plan-form { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 8px; align-items: end; padding-top: 12px; border-top: 1px solid var(--line); }
+.plan-form .field { margin: 0; }
+.plan-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .plan-grid, .plan-sug-grid { grid-template-columns: 1fr; }
+  .plan-form, .plan-sug-form { grid-template-columns: 1fr 1fr; }
+  .plan-form button, .plan-sug-form button { grid-column: 1 / -1; }
+  .plan-sug-form input[name="tarea"] { grid-column: 1 / -1; }
 }

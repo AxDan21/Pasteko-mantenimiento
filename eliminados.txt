@@ -1,0 +1,6 @@
+# Archivos que ya no existen en la app. El script actualizar-pasteko los borra de tu carpeta.
+components/GanttApertura.tsx
+components/LectorCfdi.tsx
+components/BotonUbicacion.tsx
+app/admin/mapa
+app/admin/sucursales/actions.ts

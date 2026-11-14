@@ -407,3 +407,44 @@ export async function pasarAPago(f: FormData) {
   const n = gastos.length + hojas.length;
   redirect(`${volver}${volver.includes("?") ? "&" : "?"}ok=${deshacer ? "regresadas" : `pasadas-${n}`}#pendientes`);
 }
+
+// ---------- Plan inteligente de preventivos ----------
+/** Programa una salida: mueve sus preventivos a la fecha elegida y los asigna al técnico. */
+export async function programarSalida(f: FormData) {
+  const supabase = await db();
+  const ids = f.getAll("prev").map(Number).filter(Boolean);
+  const fecha = txt(f, "fecha");
+  const volver = txt(f, "volver").startsWith("/admin/preventivos") ? txt(f, "volver") : "/admin/preventivos/plan";
+  const sep = volver.includes("?") ? "&" : "?";
+  if (!ids.length || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) redirect(`${volver}${sep}error=${encodeURIComponent("Falta la fecha de la salida.")}`);
+  const { error } = await supabase.from("preventivos")
+    .update({ fecha, tecnico_id: opcTxt(f, "tecnico_id") })
+    .in("id", ids).eq("hecho", false);
+  if (error) redirect(`${volver}${sep}error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/admin", "layout");
+  redirect(`${volver}${sep}ok=programada-${ids.length}`);
+}
+
+/** Crea los preventivos que sugiere el plan (fallas repetidas o campañas por tipo de equipo). */
+export async function crearSugeridos(f: FormData) {
+  const supabase = await db();
+  const fecha = txt(f, "fecha");
+  const tarea = txt(f, "tarea") || "Revisión preventiva";
+  const volver = txt(f, "volver").startsWith("/admin/preventivos") ? txt(f, "volver") : "/admin/preventivos/plan";
+  const sep = volver.includes("?") ? "&" : "?";
+  const objetivos = f.getAll("objetivo").map(String).map((x) => {
+    const i = x.indexOf("|");
+    return { sucursal_id: Number(x.slice(0, i)), equipo: x.slice(i + 1) };
+  }).filter((x) => x.sucursal_id && x.equipo);
+  if (!objetivos.length || !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) redirect(`${volver}${sep}error=${encodeURIComponent("Falta la fecha.")}`);
+  // Liga cada preventivo al activo de esa sucursal si lo hay
+  const { data: act } = await supabase.from("activos").select("id, sucursal_id, equipo").eq("activo", true)
+    .in("sucursal_id", objetivos.map((o) => o.sucursal_id));
+  const activoDe = (o: { sucursal_id: number; equipo: string }) =>
+    ((act ?? []) as { id: string; sucursal_id: number; equipo: string }[]).find((a) => a.sucursal_id === o.sucursal_id && a.equipo.toLowerCase() === o.equipo.toLowerCase())?.id ?? null;
+  const filas = objetivos.map((o) => ({ fecha, sucursal_id: o.sucursal_id, equipo: o.equipo, activo_id: activoDe(o), tarea, notas: "Sugerido por el plan inteligente" }));
+  const { error } = await supabase.from("preventivos").insert(filas);
+  if (error) redirect(`${volver}${sep}error=${encodeURIComponent(error.message)}`);
+  revalidatePath("/admin", "layout");
+  redirect(`${volver}${sep}ok=creados-${filas.length}`);
+}

@@ -31,17 +31,3 @@ export async function borrarEquipoCenso(f: FormData) {
   revalidatePath(`/censo/${sucursal}`);
   redirect(`/censo/${sucursal}?ok=borrado`);
 }
-
-/** Guarda la ubicación GPS de la tienda (el supervisor está en ella). Responde al botón, sin recargar. */
-export async function guardarUbicacionGps(sucursalId: number, lat: number, lng: number, precision: number) {
-  await requireSupervisor();
-  if (![lat, lng, precision].every(Number.isFinite) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return { ok: false, error: "Ubicación no válida." };
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("guardar_ubicacion_gps", {
-    p_sucursal: sucursalId, p_lat: Math.round(lat * 1e6) / 1e6, p_lng: Math.round(lng * 1e6) / 1e6, p_precision: Math.round(precision),
-  });
-  if (error) return { ok: false, error: `No se pudo guardar: ${error.message}` };
-  revalidatePath(`/censo/${sucursalId}`);
-  revalidatePath("/admin/sucursales");
-  return { ok: true, error: "" };
-}

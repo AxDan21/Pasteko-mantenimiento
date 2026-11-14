@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { estadoPreventivo, fCorta, hoy, rangoFechas, sumarDias } from "@/lib/panel";
@@ -47,6 +48,10 @@ export default async function Preventivos({ searchParams }: { searchParams: Prom
           <p className="eyebrow">Panel de mantenimiento</p>
           <h1 className="page-h">Preventivos</h1>
         </div>
+        <Link className="ax-cta" href="/admin/preventivos/plan">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="6" cy="19" r="2" /><circle cx="18" cy="5" r="2" /><path d="M8 19h7.5a3.5 3.5 0 0 0 0-7h-7a3.5 3.5 0 0 1 0-7H16" /></svg>
+          Plan inteligente de salidas
+        </Link>
       </div>
 
       {f.ok && <div className="note ok" style={{ marginBottom: 14 }}>Se programaron {f.ok} preventivo{f.ok === "1" ? "" : "s"}.</div>}
