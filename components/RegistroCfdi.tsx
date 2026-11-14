@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { crearGasto } from "@/app/admin/acciones-modulos";
 import { buscarProveedor, conceptoDe, conceptoPartida, leerCfdi, refFactura, TIPOS_CFDI, type Cfdi } from "@/lib/cfdi";
@@ -46,12 +46,33 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
   const [pagado, setPagado] = useState(false);
   const [xmlTexto, setXmlTexto] = useState("");
   const [pdfAviso, setPdfAviso] = useState("");
+  const [pdfListo, setPdfListo] = useState<File | null>(null);
+  const pdfInput = useRef<HTMLInputElement>(null);
 
-  async function leer(archivo: File | undefined) {
+  // El PDF que llegó junto con el XML se coloca en el campo del formulario en cuanto existe
+  useEffect(() => {
+    if (!pdfListo || !pdfInput.current) return;
+    try {
+      const dt = new DataTransfer();
+      dt.items.add(pdfListo);
+      pdfInput.current.files = dt.files;
+      setPdfAviso(avisoPdf(pdfListo));
+    } catch {
+      setPdfAviso("No pude adjuntar el PDF solo: elígelo en este campo.");
+    }
+  }, [pdfListo, cfdi]);
+
+  /** Recibe uno o varios archivos: toma el XML para leer la factura y el PDF para adjuntarlo. */
+  async function leer(lista: FileList | null | undefined) {
     setError("");
-    if (!archivo) return;
-    if (!/\.xml$/i.test(archivo.name) && !archivo.type.includes("xml")) {
-      setError("Ese archivo no es XML. Elige el .xml que acompaña a la factura (no el PDF).");
+    const archivos = Array.from(lista ?? []);
+    if (!archivos.length) return;
+    const archivo = archivos.find((a) => /\.xml$/i.test(a.name) || a.type.includes("xml"));
+    const pdf = archivos.find((a) => /\.pdf$/i.test(a.name) || a.type === "application/pdf") ?? null;
+    if (!archivo) {
+      if (pdf && cfdi) { setPdfListo(pdf); return; } // solo el PDF, con la factura ya leída
+      setError(pdf ? "Falta el XML: suelta el PDF y el XML juntos (o primero el XML)." : "Esos archivos no son XML ni PDF.");
+      if (input.current) input.current.value = "";
       return;
     }
     try {
@@ -78,6 +99,7 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
       setPagado(false);
       setXmlTexto(texto);
       setPdfAviso("");
+      setPdfListo(pdf);
     } catch (e) {
       setCfdi(null);
       setError((e as Error).message);
@@ -91,7 +113,7 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
 
   const zonas = Array.from(new Set(sucursales.map((s) => s.zona)));
   const elegir = (
-    <input ref={input} type="file" accept=".xml,text/xml,application/xml" onChange={(e) => leer(e.target.files?.[0])} />
+    <input ref={input} type="file" multiple accept=".xml,text/xml,application/xml,.pdf,application/pdf" onChange={(e) => leer(e.target.files)} />
   );
 
   if (!cfdi || !uno) {
@@ -101,14 +123,14 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
           className={`cfdi-drop big${arrastrando ? " on" : ""}`}
           onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
           onDragLeave={() => setArrastrando(false)}
-          onDrop={(e) => { e.preventDefault(); setArrastrando(false); leer(e.dataTransfer.files[0]); }}
+          onDrop={(e) => { e.preventDefault(); setArrastrando(false); leer(e.dataTransfer.files); }}
         >
           <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5" /><path d="M9.5 13.5 8 15l1.5 1.5M14.5 13.5 16 15l-1.5 1.5" />
           </svg>
           <span>
-            <b>Carga el XML de la factura</b>
-            <small>Arrástralo aquí o tócalo para elegirlo. Se lee en tu equipo: no se sube ni se guarda.</small>
+            <b>Carga el XML y el PDF de la factura</b>
+            <small>Arrastra aquí el XML y el PDF juntos, o tócalo para elegirlos (puedes seleccionar los dos). Se guardan hasta que pases la factura a pago.</small>
           </span>
           {elegir}
         </label>
@@ -134,7 +156,7 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
       <div className="cfdi-res">
         <div className="cfdi-res-head">
           <span className="pill ok">XML leído</span>
-          <label className="link-btn cfdi-otro">Cargar otro XML{elegir}</label>
+          <label className="link-btn cfdi-otro">Cargar otra factura{elegir}</label>
         </div>
 
         <dl className="cfdi-dl">
@@ -258,12 +280,10 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
         {pagado && <label className="field">Referencia de pago<input name="referencia_pago" placeholder="Transferencia, cheque…" /></label>}
         <label className="field cfdi-w2">PDF de la factura {pagado ? <span className="hint">opcional: ya está pagada</span> : <span className="hint">obligatorio: va a Tesorería con el XML</span>}
           <input
-            name="factura" type="file" accept="application/pdf,.pdf" required={!pagado}
-            onChange={(e) => {
-              const pdf = e.target.files?.[0];
-              setPdfAviso(!pdf ? "" : !/pdf$/i.test(pdf.type || pdf.name) ? "Ese archivo no es PDF." : pdf.size > 4 * 1024 * 1024 ? "El PDF pesa más de 4 MB y puede fallar al subir. Si puedes, descárgalo de nuevo o comprímelo." : "");
-            }}
+            ref={pdfInput} name="factura" type="file" accept="application/pdf,.pdf" required={!pagado}
+            onChange={(e) => { const pdf = e.target.files?.[0] ?? null; setPdfAviso(pdf ? avisoPdf(pdf) : ""); setPdfListo(null); }}
           />
+          {pdfListo && !pdfAviso && <span className="cfdi-sug alta">Adjuntado: {pdfListo.name}</span>}
           {pdfAviso && <span className="cfdi-sug baja">{pdfAviso}</span>}
         </label>
       </div>
@@ -280,4 +300,10 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
       </div>
     </form>
   );
+}
+
+function avisoPdf(pdf: File) {
+  if (!/pdf$/i.test(pdf.type || pdf.name)) return "Ese archivo no es PDF.";
+  if (pdf.size > 4 * 1024 * 1024) return "El PDF pesa más de 4 MB y puede fallar al subir. Si puedes, descárgalo de nuevo o comprímelo.";
+  return "";
 }
