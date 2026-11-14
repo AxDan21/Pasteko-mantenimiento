@@ -866,3 +866,23 @@ a.ax-lane:hover .ax-lane-name b { color: var(--brand); }
 .etapa-n { width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-weight: 800; flex: none; }
 .fac-files em { font-style: normal; font-size: 11px; color: var(--warn); font-weight: 700; }
 .bad-txt { color: var(--bad); font-weight: 700; }
+/* Acciones con icono (tabla de gastos del mes) */
+.nw { white-space: nowrap; }
+.iacts { display: flex; gap: 6px; justify-content: flex-end; align-items: center; }
+.iacts form { margin: 0; }
+.ibtn { position: relative; width: 36px; height: 36px; display: inline-grid; place-items: center; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; text-decoration: none; transition: background .12s ease, color .12s ease, border-color .12s ease; }
+.ibtn:hover { color: var(--ink); border-color: var(--ink); }
+.ibtn.ok:hover { color: var(--ok); border-color: var(--ok); background: var(--ok-soft); }
+.ibtn.danger:hover { color: var(--bad); border-color: var(--bad); background: var(--bad-soft); }
+.ibtn:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; }
+.ibtn-n { position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--info); color: #fff; font-size: 10px; font-weight: 800; line-height: 16px; text-align: center; }
+
+/* Pendiente de pago: resumen visible, detalle desplegable */
+.pend-kpis { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) !important; }
+.pend-det { border-top: 1px solid var(--line); padding-top: 4px; }
+.pend-det > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; font-weight: 800; }
+.pend-det > summary::-webkit-details-marker { display: none; }
+.pend-det > summary:hover { background: var(--surface-2); }
+.pend-det > summary small { flex: 1; color: var(--muted); font-weight: 500; font-size: 13px; }
+.pend-det > summary .chev { transition: transform .2s ease; color: var(--brand); }
+.pend-det[open] > summary .chev { transform: rotate(180deg); }

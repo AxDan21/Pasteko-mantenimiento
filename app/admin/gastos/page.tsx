@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BotonIcono, { IconoAccion } from "@/components/BotonIcono";
 import CopiarTexto from "@/components/CopiarTexto";
 import PaqueteFacturas, { type ArchivoFactura } from "@/components/PaqueteFacturas";
 import RegistroCfdi from "@/components/RegistroCfdi";
@@ -177,7 +178,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
           </div>
         </div>
 
-        <div className="kpis" style={{ marginBottom: 14 }}>
+        <div className="kpis pend-kpis" style={{ marginBottom: 14 }}>
           <div className="kpi"><span className="eyebrow">Total pendiente</span><span className="v" style={{ color: totalPend ? "var(--warn)" : "var(--ok)" }}>{mxn(totalPend)}</span><span className="s">{pendientes.length} pago{pendientes.length !== 1 ? "s" : ""} por hacer · el más antiguo de {masAntiguo} días</span></div>
           <div className="kpi"><span className="eyebrow">1 · Por pasar a pago</span><span className="v">{mxn(suma(porPasar))}</span><span className="s">{porPasar.length} por entregar a Tesorería</span></div>
           <div className="kpi"><span className="eyebrow">2 · En trámite</span><span className="v">{mxn(suma(enTramite))}</span><span className="s">{enTramite.length ? `${enTramite.length} esperando · la más antigua desde ${fCorta(enTramite[0].solicitado_pago!)}` : "Nada en trámite"}</span></div>
@@ -191,6 +192,14 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
         </div>
 
         {!pendientes.length && <p className="sub">No hay trabajos pendientes de pago.</p>}
+
+        {pendientes.length > 0 && (
+        <details className="pend-det" open={!!f.ok?.match(/^(pasadas|regresadas|pagados|pendiente)/) || !!f.error}>
+          <summary>
+            <span>Ver detalle por etapa</span>
+            <small>{porPasar.length} por pasar a pago · {enTramite.length} en trámite</small>
+            <svg className="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+          </summary>
 
         {porPasar.length > 0 && (
           <div className="etapa">
@@ -230,6 +239,8 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
             </form>
           </div>
         )}
+        </details>
+        )}
       </section>
 
       <div className="panel-grid" style={{ marginBottom: 16 }}>
@@ -260,7 +271,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
                 const nFac = x.factura_uuid ? hermanos.get(x.factura_uuid) ?? 1 : 1;
                 return (
                   <tr key={x.origen + x.ref}>
-                    <td className="num">{fCorta(x.fecha)}</td>
+                    <td className="num nw">{fCorta(x.fecha).replace(/ \d{2}$/, "")}</td>
                     <td><span className={`pill ${oc}`}>{o}</span></td>
                     <td>{x.sucursal ?? <span style={{ color: "var(--muted)" }}>General</span>}</td>
                     <td>{x.categoria}<br /><small style={{ color: "var(--muted)" }}>{x.tipo}</small></td>
@@ -272,18 +283,27 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
                       ) : <span className="pill warn">Pendiente</span>}
                     </td>
                     <td className="r">
-                      <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                      <div className="iacts">
                         {x.origen !== "caja" && (
                           <form action={marcarPagos}>
                             <input type="hidden" name="volver" value={volver} />
                             <input type="hidden" name="sel" value={`${x.origen}:${x.ref}`} />
                             <input type="hidden" name="pagado" value={String(!x.pagado)} />
-                            <button className="btn small" type="submit">{x.pagado ? (nFac > 1 ? "Regresar factura a pendiente" : "Regresar a pendiente") : nFac > 1 ? "Marcar factura pagada hoy" : "Marcar pagado hoy"}</button>
+                            {x.pagado
+                              ? <BotonIcono icono="regresar" texto={nFac > 1 ? `Regresar factura a pendiente (${nFac} conceptos)` : "Regresar a pendiente"} />
+                              : <BotonIcono icono="pagar" tono="ok" cuenta={nFac} texto={nFac > 1 ? `Marcar factura pagada hoy (${nFac} conceptos)` : "Marcar pagado hoy"} />}
                           </form>
                         )}
-                        {fac && urls.get(fac) && <a className="btn small" href={urls.get(fac)} target="_blank" rel="noopener noreferrer">Factura</a>}
+                        {fac && urls.get(fac) && (
+                          <a className="ibtn" href={urls.get(fac)} target="_blank" rel="noopener noreferrer" title="Ver factura" aria-label="Ver factura"><IconoAccion nombre="factura" /></a>
+                        )}
                         {x.origen === "gasto" && (
-                          <form action={borrarGasto}><input type="hidden" name="id" value={x.ref} /><button className="btn small danger" type="submit">{nFac > 1 ? `Borrar factura (${nFac})` : "Borrar"}</button></form>
+                          <form action={borrarGasto}>
+                            <input type="hidden" name="id" value={x.ref} />
+                            <BotonIcono icono="borrar" tono="danger" cuenta={nFac}
+                              texto={nFac > 1 ? `Borrar factura (${nFac} conceptos)` : "Borrar gasto"}
+                              confirmar={nFac > 1 ? `¿Borrar la factura completa (${nFac} conceptos)? No se puede deshacer.` : "¿Borrar este gasto? No se puede deshacer."} />
+                          </form>
                         )}
                       </div>
                     </td>
@@ -320,7 +340,7 @@ function TablaPend({ lista, hoy: h, archivosDe, tramite }: { lista: Fila[]; hoy:
             return (
               <tr key={x.origen + x.ref}>
                 <td><input type="checkbox" name="sel" value={`${x.origen}:${x.ref}`} aria-label={`Seleccionar ${x.concepto}`} className="sel-chk" /></td>
-                <td className="num">{fCorta(x.fecha)}</td>
+                <td className="num nw">{fCorta(x.fecha).replace(/ \d{2}$/, "")}</td>
                 <td className="r"><span className={`pill ${d > 30 ? "bad" : d > 15 ? "warn" : "neutral"} num`}>{d}</span></td>
                 <td><span className={`pill ${oc}`}>{o}</span></td>
                 <td>{x.sucursal ?? "General"}</td>
