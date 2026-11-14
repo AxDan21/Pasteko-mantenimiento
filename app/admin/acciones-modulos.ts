@@ -89,23 +89,33 @@ export async function crearGasto(f: FormData) {
   } catch (e) {
     redirect(`/admin/gastos?error=${encodeURIComponent((e as Error).message)}`);
   }
-  const { error } = await supabase.from("gastos").insert({
+  const pagado = txt(f, "pagado") === "true";
+  const comun = {
     fecha: txt(f, "fecha"),
     sucursal_id: opcNum(f, "sucursal_id"),
-    categoria: txt(f, "categoria") || "Otros",
-    tipo: txt(f, "tipo") || "Correctivo",
-    concepto: txt(f, "concepto"),
-    monto: num(f, "monto"),
     proveedor_id: opcNum(f, "proveedor_id"),
     activo_id: opcTxt(f, "activo_id"),
     factura_path: factura,
-    pagado: txt(f, "pagado") === "true",
-    fecha_pago: txt(f, "pagado") === "true" ? txt(f, "fecha_pago") || txt(f, "fecha") : null,
-    referencia_pago: txt(f, "pagado") === "true" ? opcTxt(f, "referencia_pago") : null,
-  });
+    pagado,
+    fecha_pago: pagado ? txt(f, "fecha_pago") || txt(f, "fecha") : null,
+    referencia_pago: pagado ? opcTxt(f, "referencia_pago") : null,
+  };
+  // Factura dividida en un gasto por concepto (viene del lector de XML)
+  const pDesc = f.getAll("p_desc").map((v) => String(v).trim());
+  const pCat = f.getAll("p_cat").map(String), pTipo = f.getAll("p_tipo").map(String), pMonto = f.getAll("p_monto").map(Number);
+  const filas = pDesc.length > 1 && pDesc.length === pMonto.length
+    ? pDesc.map((d, i) => ({
+        ...comun,
+        concepto: d || txt(f, "concepto"),
+        categoria: pCat[i] || txt(f, "categoria") || "Otros",
+        tipo: ["Preventivo", "Correctivo", "Otro"].includes(pTipo[i]) ? pTipo[i] : txt(f, "tipo") || "Correctivo",
+        monto: Math.round((pMonto[i] || 0) * 100) / 100,
+      })).filter((r) => r.monto > 0)
+    : [{ ...comun, categoria: txt(f, "categoria") || "Otros", tipo: txt(f, "tipo") || "Correctivo", concepto: txt(f, "concepto"), monto: num(f, "monto") }];
+  const { error } = await supabase.from("gastos").insert(filas);
   if (error) redirect(`/admin/gastos?error=${encodeURIComponent(error.message)}`);
   revalidatePath("/admin", "layout");
-  redirect(`/admin/gastos?mes=${txt(f, "fecha").slice(0, 7)}&ok=1`);
+  redirect(`/admin/gastos?mes=${txt(f, "fecha").slice(0, 7)}&ok=${filas.length > 1 ? `partidas-${filas.length}` : "1"}`);
 }
 
 /**

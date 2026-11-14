@@ -68,7 +68,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
     pendientes.map((x) => `${fCorta(x.fecha)} | ${x.sucursal ?? "General"} | ${x.concepto} | ${x.beneficiario ?? "—"} | ${mxn(Number(x.monto))} | ${diasEntre(x.fecha, h)} días`).join("\n");
   const volver = `/admin/gastos?mes=${mes}${f.zona ? `&zona=${encodeURIComponent(f.zona)}` : ""}${f.pago ? `&pago=${f.pago}` : ""}`;
 
-  const okMsg = f.ok === "1" ? "Gasto registrado." : f.ok === "pendiente" ? "Concepto regresado a pendiente de pago." : f.ok?.startsWith("pagados-") ? `${f.ok.slice(8)} concepto(s) marcados como pagados.` : null;
+  const okMsg = f.ok === "1" ? "Gasto registrado." : f.ok?.startsWith("partidas-") ? `Factura registrada como ${f.ok.slice(9)} gastos, uno por concepto.` : f.ok === "pendiente" ? "Concepto regresado a pendiente de pago." : f.ok?.startsWith("pagados-") ? `${f.ok.slice(8)} concepto(s) marcados como pagados.` : null;
 
   return (
     <main className="wrap">
@@ -88,7 +88,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
           <h3>Registrar gasto</h3>
           <p className="sub">Facturas de proveedores, compras y servicios. Las hojas de servicio y la caja chica se suman solas.</p>
           <form action={crearGasto} className="inline-form">
-            <LectorCfdi proveedores={((prov ?? []) as { id: number; nombre: string }[])} />
+            <LectorCfdi proveedores={((prov ?? []) as { id: number; nombre: string }[])} categorias={categorias} />
             <label className="field">Fecha del trabajo<input id="g-fecha" name="fecha" type="date" required defaultValue={h} /></label>
             <label className="field">Sucursal
               <select id="g-suc" name="sucursal_id" defaultValue="">

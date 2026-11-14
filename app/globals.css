@@ -788,3 +788,29 @@ a.ax-lane:hover .ax-lane-name b { color: var(--brand); }
 .cfdi .note { margin: 0; }
 .cfdi-lleno { box-shadow: 0 0 0 3px color-mix(in srgb, var(--orange) 45%, transparent) !important; transition: box-shadow .3s ease; }
 @media (max-width: 900px) { .cfdi-dl { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cfdi-tbl-wrap { overflow-x: auto; background: var(--surface); border-radius: 10px; }
+.cfdi-tbl { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 520px; }
+.cfdi-tbl caption { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 10px 10px 4px; }
+.cfdi-tbl th { text-align: left; font-size: 11px; font-weight: 700; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.cfdi-tbl td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.cfdi-tbl td small { display: block; color: var(--muted); font-size: 11px; }
+.cfdi-tbl .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.cfdi-tbl tfoot td { border-bottom: 0; font-weight: 700; }
+.cfdi-modo { border: 0; padding: 0; margin: 0; }
+.cfdi-modo legend { font-size: 13px; font-weight: 800; margin-bottom: 8px; padding: 0; }
+.cfdi-modo > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cfdi-modo button { text-align: left; padding: 12px 14px; border-radius: 12px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.cfdi-modo button small { font-size: 12px; color: var(--muted); }
+.cfdi-modo button[aria-pressed="true"] { border-color: var(--orange); background: color-mix(in srgb, var(--orange) 8%, var(--surface)); }
+.cfdi-partidas { display: flex; flex-direction: column; gap: 8px; }
+.cfdi-partida { display: grid; grid-template-columns: 28px minmax(0, 2.4fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: 8px; align-items: end; background: var(--surface); border-radius: 12px; padding: 10px; }
+.cfdi-n { width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; font-size: 12px; font-weight: 800; align-self: center; }
+.cfdi-monto { display: flex; flex-direction: column; align-items: flex-end; padding-bottom: 8px; white-space: nowrap; }
+.cfdi-monto small { font-size: 11px; color: var(--muted); font-weight: 700; }
+.cfdi-monto b { font-size: 16px; font-variant-numeric: tabular-nums; }
+@media (max-width: 760px) {
+  .cfdi-modo > div { grid-template-columns: 1fr; }
+  .cfdi-partida { grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr); }
+  .cfdi-partida .cfdi-desc { grid-column: 2 / -1; }
+  .cfdi-partida .cfdi-monto { grid-column: 2 / -1; flex-direction: row; justify-content: space-between; align-items: baseline; padding: 0; }
+}

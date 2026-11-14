@@ -20,7 +20,12 @@ export type Cfdi = {
   moneda: string;
   metodoPago: string;      // PUE una exhibición · PPD parcialidades o diferido
   formaPago: string;
-  conceptos: { descripcion: string; cantidad: number; importe: number }[];
+  conceptos: Concepto[];
+};
+/** Un renglón de la factura. `total` = importe − descuento + IVA y otros traslados − retenciones. */
+export type Concepto = {
+  descripcion: string; cantidad: number; unidad: string; valorUnitario: number;
+  importe: number; descuento: number; iva: number; retenciones: number; total: number;
 };
 
 const num = (v: string | null | undefined) => {
@@ -49,11 +54,29 @@ export function leerCfdi(xml: string): Cfdi {
     if (!iva) iva = num(attr(imp, "TotalImpuestosTrasladados"));
   }
 
-  const conceptos = Array.from(comp.getElementsByTagNameNS("*", "Concepto")).map((c) => ({
-    descripcion: attr(c, "Descripcion").replace(/\s+/g, " ").trim(),
-    cantidad: num(attr(c, "Cantidad")),
-    importe: num(attr(c, "Importe")),
-  }));
+  const conceptos: Concepto[] = Array.from(comp.getElementsByTagNameNS("*", "Concepto"))
+    .filter((c) => c.parentElement?.localName === "Conceptos")
+    .map((c) => {
+      const traslados = Array.from(c.getElementsByTagNameNS("*", "Traslado"));
+      const rets = Array.from(c.getElementsByTagNameNS("*", "Retencion"));
+      const importe = num(attr(c, "Importe")), descuento = num(attr(c, "Descuento"));
+      const ivaC = traslados.filter((t) => attr(t, "Impuesto") === "002").reduce((s, t) => s + num(attr(t, "Importe")), 0);
+      const otros = traslados.filter((t) => attr(t, "Impuesto") !== "002").reduce((s, t) => s + num(attr(t, "Importe")), 0);
+      const retenciones = rets.reduce((s, t) => s + num(attr(t, "Importe")), 0);
+      return {
+        descripcion: mayus(attr(c, "Descripcion").replace(/\s+/g, " ").trim()),
+        cantidad: num(attr(c, "Cantidad")), unidad: attr(c, "Unidad") || attr(c, "ClaveUnidad"),
+        valorUnitario: num(attr(c, "ValorUnitario")), importe, descuento, iva: ivaC, retenciones,
+        total: importe - descuento + ivaC + otros - retenciones,
+      };
+    });
+  // Cada concepto a centavos; el último absorbe el redondeo para que la suma sea exactamente el total
+  const totalFactura = num(attr(comp, "Total"));
+  let acumulado = 0;
+  conceptos.forEach((k, i) => {
+    k.total = i < conceptos.length - 1 ? Math.round(k.total * 100) / 100 : Math.round((totalFactura - acumulado) * 100) / 100;
+    acumulado += k.total;
+  });
 
   return {
     version: attr(comp, "Version"),
@@ -77,19 +100,59 @@ export function leerCfdi(xml: string): Cfdi {
   };
 }
 
-/** Texto para el campo "Concepto": la descripción principal y el folio de la factura. */
-export function conceptoDe(c: Cfdi, max = 180) {
-  const principal = [...c.conceptos].sort((a, b) => b.importe - a.importe)[0]?.descripcion ?? "Factura";
-  const resto = c.conceptos.length > 1 ? ` y ${c.conceptos.length - 1} concepto${c.conceptos.length > 2 ? "s" : ""} más` : "";
+const mayus = (t: string) => (t ? t.charAt(0).toUpperCase() + t.slice(1) : t);
+const pesos = (n: number) => `$${n.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/** Referencia corta de la factura: serie y folio, o el inicio del folio fiscal si no trae folio. */
+export const refFactura = (c: Cfdi) => {
   const folio = `${c.serie}${c.folio}`.trim();
-  const sufijo = folio ? ` · Fact. ${folio}` : "";
-  const base = principal.length + resto.length + sufijo.length > max ? principal.slice(0, Math.max(20, max - resto.length - sufijo.length - 1)) + "…" : principal;
-  return `${base}${resto}${sufijo}`;
+  return folio ? `Fact. ${folio}` : c.uuid ? `UUID ${c.uuid.slice(0, 8)}` : "";
+};
+
+/** Texto para el campo "Concepto" con TODOS los conceptos y su costo con IVA. */
+export function conceptoDe(c: Cfdi) {
+  const ref = refFactura(c);
+  if (!c.conceptos.length) return ref || "Factura";
+  const partes = c.conceptos.length === 1
+    ? [c.conceptos[0].descripcion]
+    : c.conceptos.map((k) => `${k.cantidad !== 1 ? `${k.cantidad} × ` : ""}${k.descripcion} (${pesos(k.total)})`);
+  return `${partes.join(" + ")}${ref ? ` · ${ref}` : ""}`;
 }
+
+/** Concepto de una sola partida, cuando la factura se divide en varios gastos. */
+export const conceptoPartida = (c: Cfdi, k: Concepto) => {
+  const ref = refFactura(c);
+  return `${k.cantidad !== 1 ? `${k.cantidad} × ` : ""}${k.descripcion}${ref ? ` · ${ref}` : ""}`;
+};
+
+const PALABRAS: [RegExp, string[]][] = [
+  [/horno|charola|resistencia|termostato/, ["horno"]],
+  [/refriger|congelad|compresor|camara fria|enfriador|vitrina|gas refrigerante|evaporador|condensador/, ["refriger", "congel"]],
+  [/cafeter|espresso|molino de cafe/, ["cafet"]],
+  [/espiguero/, ["espiguero"]],
+  [/hielo/, ["hielo"]],
+  [/licuadora/, ["licuadora"]],
+  [/letra|letrero|anuncio|luminos|fuente de poder|electric|contacto|apagador|iluminacion|lampara|luminaria|plomer|tuberia|fuga|pintura|impermeab|puerta|chapa|cortina|aire acondicionado|minisplit|extractor|campana/, ["instalaciones"]],
+];
+/** Sugiere la categoría de un concepto por palabras clave (si existe en tu lista). */
+export function sugerirCategoria(descripcion: string, categorias: string[]): string | null {
+  const d = normal(descripcion);
+  const cats = categorias.map((c) => ({ c, n: normal(c) }));
+  const directa = cats.find(({ n }) => n.length > 3 && d.includes(n.replace(/s$/, "")));
+  if (directa) return directa.c;
+  for (const [re, claves] of PALABRAS) {
+    if (!re.test(d)) continue;
+    const hit = cats.find(({ n }) => claves.some((k) => n.includes(k)));
+    if (hit) return hit.c;
+  }
+  return null;
+}
+export const sugerirTipo = (descripcion: string) =>
+  /preventiv/i.test(descripcion) ? "Preventivo" : /correctiv|cambio|reparaci|sustituc|reemplaz/i.test(descripcion) ? "Correctivo" : null;
 
 const LIMPIAR = /\b(s\.?\s?a\.?|s\.?\s?a\.?\s?p\.?\s?i\.?|de|c\.?\s?v\.?|s\.?\s?de\s?r\.?\s?l\.?|s\.?\s?c\.?|del|la|el|y)\b/g;
 const normal = (s: string) =>
-  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[.,]/g, " ").replace(LIMPIAR, " ").replace(/\s+/g, " ").trim();
+  s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[.,]/g, " ").replace(LIMPIAR, " ").replace(/\s+/g, " ").trim();
 
 /** Busca el proveedor del catálogo que más se parece al emisor de la factura. */
 export function buscarProveedor<T extends { id: number; nombre: string }>(c: Cfdi, proveedores: T[]): T | null {
