@@ -88,19 +88,34 @@ export async function crearGasto(f: FormData) {
     const { data: previo } = await supabase.from("gastos").select("fecha, concepto").eq("factura_uuid", uuid).limit(1).maybeSingle();
     if (previo) redirect(`/admin/gastos?error=${encodeURIComponent(`Esta factura ya está registrada (${previo.fecha} · ${previo.concepto}). No se volvió a guardar.`)}`);
   }
-  let factura: string | null = null;
+  const pagado = txt(f, "pagado") === "true";
+  const carpeta = `gastos/${txt(f, "fecha").slice(0, 7)}`;
+  const pdf = f.get("factura");
+  // Facturas por XML: el PDF es obligatorio mientras esté pendiente de pago (va a Tesorería)
+  if (uuid && !pagado && !(pdf instanceof File && pdf.size > 0)) {
+    redirect(`/admin/gastos?error=${encodeURIComponent("Adjunta el PDF de la factura: se manda a Tesorería junto con el XML.")}`);
+  }
+  let factura: string | null = null, xml: string | null = null;
   try {
-    factura = await subirFactura(supabase, f, `gastos/${txt(f, "fecha").slice(0, 7)}`);
+    // Ya pagada desde el registro: no hace falta guardar archivos
+    if (!(uuid && pagado)) factura = await subirFactura(supabase, f, carpeta);
+    const texto = String(f.get("xml_texto") ?? "");
+    if (uuid && !pagado && texto) {
+      xml = `${carpeta}/${uuid}.xml`;
+      const { error: ex } = await supabase.storage.from("facturas").upload(xml, new Blob([texto], { type: "application/xml" }), { contentType: "application/xml", upsert: true });
+      if (ex) throw new Error(`No se pudo guardar el XML: ${ex.message}`);
+    }
   } catch (e) {
+    if (factura) await supabase.storage.from("facturas").remove([factura]);
     redirect(`/admin/gastos?error=${encodeURIComponent((e as Error).message)}`);
   }
-  const pagado = txt(f, "pagado") === "true";
   const comun = {
     fecha: txt(f, "fecha"),
     sucursal_id: opcNum(f, "sucursal_id"),
     proveedor_id: opcNum(f, "proveedor_id"),
     activo_id: opcTxt(f, "activo_id"),
     factura_path: factura,
+    xml_path: xml,
     pagado,
     fecha_pago: pagado ? txt(f, "fecha_pago") || txt(f, "fecha") : null,
     referencia_pago: pagado ? opcTxt(f, "referencia_pago") : null,
@@ -121,7 +136,11 @@ export async function crearGasto(f: FormData) {
       })).filter((r) => r.monto > 0)
     : [{ ...comun, categoria: txt(f, "categoria") || "Otros", tipo: txt(f, "tipo") || "Correctivo", concepto: txt(f, "concepto"), monto: num(f, "monto") }];
   const { error } = await supabase.from("gastos").insert(filas);
-  if (error) redirect(`/admin/gastos?error=${encodeURIComponent(error.message)}`);
+  if (error) {
+    const subidos = [factura, xml].filter((x): x is string => !!x);
+    if (subidos.length) await supabase.storage.from("facturas").remove(subidos);
+    redirect(`/admin/gastos?error=${encodeURIComponent(error.message)}`);
+  }
   revalidatePath("/admin", "layout");
   redirect(`/admin/gastos?mes=${txt(f, "fecha").slice(0, 7)}&ok=${filas.length > 1 ? `partidas-${filas.length}` : "1"}`);
 }
@@ -145,6 +164,8 @@ export async function marcarPagos(f: FormData) {
   const regreso = txt(f, "volver") || "/admin/gastos";
   if (!gastos.length && !hojas.length) redirect(`${regreso}${regreso.includes("?") ? "&" : "?"}error=${encodeURIComponent("Selecciona al menos un concepto.")}#pendientes`);
   if (gastos.length) await supabase.from("gastos").update(cambios).in("id", gastos);
+  // Pagadas: el PDF y el XML ya no se necesitan, se borran para ahorrar espacio
+  if (pagado && gastos.length) await borrarArchivos(supabase, gastos, true);
   if (hojas.length) await supabase.from("hojas_servicio").update(cambios).in("id", hojas);
   revalidatePath("/admin", "layout");
   const n = gastos.length + hojas.length;
@@ -161,9 +182,22 @@ async function conFactura(supabase: Awaited<ReturnType<typeof db>>, ids: number[
 }
 
 /** Borra un gasto; si viene de una factura dividida, borra la factura completa para no dejarla incompleta. */
+/** Borra del almacenamiento el PDF y XML de facturas (CFDI) y limpia las rutas. */
+async function borrarArchivos(supabase: Awaited<ReturnType<typeof db>>, ids: number[], soloCfdi: boolean) {
+  let q = supabase.from("gastos").select("id, factura_path, xml_path").in("id", ids);
+  if (soloCfdi) q = q.not("factura_uuid", "is", null);
+  const { data } = await q;
+  const filas = (data ?? []) as { id: number; factura_path: string | null; xml_path: string | null }[];
+  const rutas = Array.from(new Set(filas.flatMap((x) => [x.factura_path, x.xml_path]).filter((x): x is string => !!x)));
+  if (!rutas.length) return;
+  await supabase.storage.from("facturas").remove(rutas);
+  await supabase.from("gastos").update({ factura_path: null, xml_path: null }).in("id", filas.map((x) => x.id));
+}
+
 export async function borrarGasto(f: FormData) {
   const supabase = await db();
   const ids = await conFactura(supabase, [num(f, "id")]);
+  await borrarArchivos(supabase, ids, false);
   await supabase.from("gastos").delete().in("id", ids);
   revalidatePath("/admin", "layout");
 }
@@ -348,4 +382,28 @@ export async function borrarRefaccion(f: FormData) {
   const supabase = await db();
   await supabase.from("refacciones").delete().eq("id", num(f, "id"));
   revalidatePath("/admin/refacciones");
+}
+
+/**
+ * Etapa 1 → 2: facturas entregadas a Tesorería (impresas y por correo).
+ * Desde aquí ya no se necesitan el PDF ni el XML: se borran para ahorrar espacio.
+ * Con "deshacer" regresan a "por pasar a pago" (los archivos ya no vuelven).
+ */
+export async function pasarAPago(f: FormData) {
+  const supabase = await db();
+  const deshacer = txt(f, "deshacer") === "1";
+  const fecha = deshacer ? null : txt(f, "fecha_solicitud") || new Date().toISOString().slice(0, 10);
+  const sel = f.getAll("sel").map(String);
+  const ids = (origen: string) => sel.filter((x) => x.startsWith(`${origen}:`)).map((x) => x.slice(origen.length + 1));
+  let gastos = ids("gasto").map(Number).filter(Boolean);
+  const hojas = ids("hoja").filter((x) => /^[0-9a-f-]{36}$/.test(x));
+  const volver = txt(f, "volver").startsWith("/admin/gastos") ? txt(f, "volver") : "/admin/gastos";
+  if (!gastos.length && !hojas.length) redirect(`${volver}${volver.includes("?") ? "&" : "?"}error=${encodeURIComponent("Selecciona al menos una factura.")}#pendientes`);
+  if (gastos.length) gastos = await conFactura(supabase, gastos);
+  if (gastos.length) await supabase.from("gastos").update({ solicitado_pago: fecha }).in("id", gastos).eq("pagado", false);
+  if (hojas.length) await supabase.from("hojas_servicio").update({ solicitado_pago: fecha }).in("id", hojas).eq("pagado", false);
+  if (!deshacer && gastos.length) await borrarArchivos(supabase, gastos, true);
+  revalidatePath("/admin", "layout");
+  const n = gastos.length + hojas.length;
+  redirect(`${volver}${volver.includes("?") ? "&" : "?"}ok=${deshacer ? "regresadas" : `pasadas-${n}`}#pendientes`);
 }

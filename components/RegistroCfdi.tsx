@@ -44,6 +44,8 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
   const [partidas, setPartidas] = useState<Partida[]>([]);
   const [uno, setUno] = useState<{ concepto: string; cat: string; tipo: string; sug: Sugerencia } | null>(null);
   const [pagado, setPagado] = useState(false);
+  const [xmlTexto, setXmlTexto] = useState("");
+  const [pdfAviso, setPdfAviso] = useState("");
 
   async function leer(archivo: File | undefined) {
     setError("");
@@ -53,7 +55,8 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
       return;
     }
     try {
-      const c = leerCfdi(await archivo.text());
+      const texto = await archivo.text();
+      const c = leerCfdi(texto);
       const p = buscarProveedor(c, proveedores);
       const ps: Partida[] = c.conceptos.map((k) => {
         const sug = clasificar(k.descripcion, ctx);
@@ -73,6 +76,8 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
       setUno({ concepto: conceptoDe(c), cat: sugUno.categoria ?? "", tipo: sugerirTipo(todo), sug: sugUno });
       setDividir(ps.length > 1 && cats.size > 1);
       setPagado(false);
+      setXmlTexto(texto);
+      setPdfAviso("");
     } catch (e) {
       setCfdi(null);
       setError((e as Error).message);
@@ -125,6 +130,7 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
       <input type="hidden" name="factura_uuid" value={cfdi.uuid} />
       <input type="hidden" name="factura_ref" value={refFactura(cfdi)} />
       <input type="hidden" name="factura_total" value={cfdi.total.toFixed(2)} />
+      <input type="hidden" name="xml_texto" value={xmlTexto} />
       <div className="cfdi-res">
         <div className="cfdi-res-head">
           <span className="pill ok">XML leído</span>
@@ -250,7 +256,16 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
         </label>
         {pagado && <label className="field">Fecha de pago<input name="fecha_pago" type="date" defaultValue={hoy} /></label>}
         {pagado && <label className="field">Referencia de pago<input name="referencia_pago" placeholder="Transferencia, cheque…" /></label>}
-        <label className="field cfdi-w2">PDF o foto de la factura (opcional)<input name="factura" type="file" accept="image/*,application/pdf" /></label>
+        <label className="field cfdi-w2">PDF de la factura {pagado ? <span className="hint">opcional: ya está pagada</span> : <span className="hint">obligatorio: va a Tesorería con el XML</span>}
+          <input
+            name="factura" type="file" accept="application/pdf,.pdf" required={!pagado}
+            onChange={(e) => {
+              const pdf = e.target.files?.[0];
+              setPdfAviso(!pdf ? "" : !/pdf$/i.test(pdf.type || pdf.name) ? "Ese archivo no es PDF." : pdf.size > 4 * 1024 * 1024 ? "El PDF pesa más de 4 MB y puede fallar al subir. Si puedes, descárgalo de nuevo o comprímelo." : "");
+            }}
+          />
+          {pdfAviso && <span className="cfdi-sug baja">{pdfAviso}</span>}
+        </label>
       </div>
 
       {enPartidas && (

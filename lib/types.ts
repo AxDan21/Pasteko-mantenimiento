@@ -79,6 +79,7 @@ export type GastoV = {
   zona: string | null; categoria: string; tipo: string; concepto: string; monto: number; activo_id: string | null;
   pagado: boolean; fecha_pago: string | null; referencia_pago: string | null; beneficiario: string | null;
   factura_uuid?: string | null; factura_ref?: string | null; factura_total?: number | null;
+  solicitado_pago?: string | null;
 };
 
 export type Gasto = {
