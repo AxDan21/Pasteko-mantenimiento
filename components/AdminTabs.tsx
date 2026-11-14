@@ -13,6 +13,7 @@ const TABS = [
   ["/admin/caja", "Caja chica"],
   ["/admin/tecnicos", "Técnicos y proveedores"],
   ["/admin/refacciones", "Refacciones"],
+  ["/admin/mapa", "Mapa"],
   ["/admin/sucursales", "Sucursales"],
   ["/admin/supervisores", "Supervisores"],
   ["/aperturas", "Aperturas"],

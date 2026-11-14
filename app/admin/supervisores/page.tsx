@@ -2,6 +2,7 @@ import CopiarTexto from "@/components/CopiarTexto";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { mxn } from "@/lib/format";
+import { enlaceComoLlegar } from "@/lib/geo";
 import { estadoPreventivo, fCorta, hoy, mesActual, nombreMes, rangoFechas, sumarDias } from "@/lib/panel";
 import type { Preventivo } from "@/lib/types";
 
@@ -12,8 +13,8 @@ export default async function Supervisores({ searchParams }: { searchParams: Pro
   const h = hoy(), mes = mesActual();
   const [ini, fin] = rangoFechas(mes);
 
-  const { data: suc } = await supabase.from("sucursales").select("id, nombre, zona, supervisor").eq("activa", true).order("nombre");
-  const sucursales = (suc ?? []) as { id: number; nombre: string; zona: string; supervisor: string | null }[];
+  const { data: suc } = await supabase.from("sucursales").select("id, nombre, zona, supervisor, lat, lng").eq("activa", true).order("nombre");
+  const sucursales = (suc ?? []) as { id: number; nombre: string; zona: string; supervisor: string | null; lat: number | null; lng: number | null }[];
   const zonas = Array.from(new Set(sucursales.map((s) => s.zona))).sort();
   const zona = f.zona && zonas.includes(f.zona) ? f.zona : zonas[0];
   const tiendas = sucursales.filter((s) => s.zona === zona);
@@ -80,7 +81,7 @@ export default async function Supervisores({ searchParams }: { searchParams: Pro
           <tbody>
             {filas.map((x) => (
               <tr key={x.t.id}>
-                <td><b>{x.t.nombre}</b></td>
+                <td><b>{x.t.nombre}</b>{x.t.lat != null && x.t.lng != null && <><br /><a className="llegar" href={enlaceComoLlegar({ lat: x.t.lat, lng: x.t.lng })} target="_blank" rel="noopener noreferrer">Cómo llegar ↗</a></>}</td>
                 <td>{x.pend.length ? x.pend.map((p) => <small key={p.id} style={{ display: "block" }}>{fCorta(p.fecha)} · {p.tarea}</small>) : <small style={{ color: "var(--muted)" }}>Sin pendientes</small>}</td>
                 <td className="r"><span className={`pill ${x.venc.length ? "bad" : "ok"}`}>{x.venc.length}</span></td>
                 <td className="r num">{x.delMes}</td>
