@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
+import BotonUbicacion from "@/components/BotonUbicacion";
 import FormEquipoCenso from "@/components/FormEquipoCenso";
 import { requireSupervisor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -23,7 +24,7 @@ export default async function CensoSucursal({ params, searchParams }: { params: 
   const esAdmin = perfil.rol === "admin";
   const supabase = await createClient();
 
-  const { data: s } = await supabase.from("sucursales").select("id, nombre, zona, censo_completo, censo_fecha").eq("id", Number(sid)).maybeSingle();
+  const { data: s } = await supabase.from("sucursales").select("id, nombre, zona, censo_completo, censo_fecha, lat, lng, ubicacion_fuente, ubicacion_fecha").eq("id", Number(sid)).maybeSingle();
   if (!s || (!esAdmin && s.zona !== perfil.zona)) notFound();
 
   const [{ data: a }, { data: eqs }] = await Promise.all([
@@ -72,6 +73,7 @@ export default async function CensoSucursal({ params, searchParams }: { params: 
           </div>
 
           <div className="stack">
+            <BotonUbicacion sucursalId={s.id} previa={s.lat != null && s.lng != null ? { lat: s.lat, lng: s.lng, fuente: s.ubicacion_fuente, fecha: s.ubicacion_fecha } : null} />
             <section className="card">
               <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
                 <h3>Equipos registrados</h3>

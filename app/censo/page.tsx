@@ -11,10 +11,10 @@ export default async function Censo() {
   const esAdmin = perfil.rol === "admin";
   const supabase = await createClient();
 
-  let qs = supabase.from("sucursales").select("id, nombre, zona, censo_completo").eq("activa", true).order("zona").order("nombre");
+  let qs = supabase.from("sucursales").select("id, nombre, zona, censo_completo, lat").eq("activa", true).order("zona").order("nombre");
   if (!esAdmin) qs = qs.eq("zona", perfil.zona ?? "__sin_zona__");
   const [{ data: suc }, { data: act }] = await Promise.all([qs, supabase.from("activos").select("sucursal_id, validado").eq("activo", true)]);
-  const sucursales = (suc ?? []) as { id: number; nombre: string; zona: string; censo_completo: boolean }[];
+  const sucursales = (suc ?? []) as { id: number; nombre: string; zona: string; censo_completo: boolean; lat: number | null }[];
   const conteo = new Map<number, { total: number; pendientes: number }>();
   (act ?? []).forEach((a) => {
     const c = conteo.get(a.sucursal_id as number) ?? { total: 0, pendientes: 0 };
@@ -64,6 +64,7 @@ export default async function Censo() {
                       {s.censo_completo ? "Completa" : c.total ? "En proceso" : "Sin empezar"}
                     </span>
                     {c.pendientes > 0 && <small>{c.pendientes} por validar</small>}
+                    <small className={s.lat != null ? "censo-ubi ok" : "censo-ubi"}>{s.lat != null ? "✓ Ubicación guardada" : "Falta ubicación"}</small>
                   </Link>
                 );
               })}
