@@ -122,6 +122,9 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
 
   return (
     <form action={crearGasto} className="cfdi">
+      <input type="hidden" name="factura_uuid" value={cfdi.uuid} />
+      <input type="hidden" name="factura_ref" value={refFactura(cfdi)} />
+      <input type="hidden" name="factura_total" value={cfdi.total.toFixed(2)} />
       <div className="cfdi-res">
         <div className="cfdi-res-head">
           <span className="pill ok">XML leído</span>
@@ -250,7 +253,12 @@ export default function RegistroCfdi({ proveedores, sucursales, activos, hoy, ca
         <label className="field cfdi-w2">PDF o foto de la factura (opcional)<input name="factura" type="file" accept="image/*,application/pdf" /></label>
       </div>
 
-      {enPartidas && <p className="cfdi-hint">Se crearán {n} gastos con la misma fecha, sucursal, proveedor, estado de pago y PDF.</p>}
+      {enPartidas && (
+        <p className="cfdi-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" /></svg>
+          <span>Se crearán {n} gastos <b>ligados a la misma factura ({refFactura(cfdi)})</b>: cada uno cuenta en su categoría, pero en pendientes de pago aparecen como una sola factura de {mxn(cfdi.total)} y se pagan o se borran juntos.</span>
+        </p>
+      )}
       <div className="cfdi-actions">
         <button type="button" className="btn" onClick={() => { setCfdi(null); setUno(null); }}>Cancelar</button>
         <Registrar n={n} total={cfdi.total} />

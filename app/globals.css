@@ -842,3 +842,10 @@ a.ax-lane:hover .ax-lane-name b { color: var(--brand); }
   .cfdi-submit { width: 100%; }
 }
 @media (max-width: 760px) { .cfdi-partida .cfdi-n { margin-top: 0; } .cfdi-partida .cfdi-monto { padding: 0; } }
+.cfdi-link { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--info-soft); color: var(--info); font-size: 14px; line-height: 1.45; }
+.cfdi-link svg { flex: none; margin-top: 2px; }
+.cfdi-link span { color: var(--ink); }
+.fac-tag { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11px; font-weight: 700; color: var(--info); background: var(--info-soft); border-radius: 6px; padding: 1px 7px; }
+.fac-partes { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12px; color: var(--muted); }
+.fac-partes li { display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+.fac-partes li b { color: var(--ink); font-weight: 700; white-space: nowrap; }

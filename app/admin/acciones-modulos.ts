@@ -83,6 +83,11 @@ export async function borrarPreventivo(f: FormData) {
 // ---------- Gastos ----------
 export async function crearGasto(f: FormData) {
   const supabase = await db();
+  const uuid = txt(f, "factura_uuid").toUpperCase() || null;
+  if (uuid) {
+    const { data: previo } = await supabase.from("gastos").select("fecha, concepto").eq("factura_uuid", uuid).limit(1).maybeSingle();
+    if (previo) redirect(`/admin/gastos?error=${encodeURIComponent(`Esta factura ya está registrada (${previo.fecha} · ${previo.concepto}). No se volvió a guardar.`)}`);
+  }
   let factura: string | null = null;
   try {
     factura = await subirFactura(supabase, f, `gastos/${txt(f, "fecha").slice(0, 7)}`);
@@ -99,6 +104,9 @@ export async function crearGasto(f: FormData) {
     pagado,
     fecha_pago: pagado ? txt(f, "fecha_pago") || txt(f, "fecha") : null,
     referencia_pago: pagado ? opcTxt(f, "referencia_pago") : null,
+    factura_uuid: uuid,
+    factura_ref: uuid ? opcTxt(f, "factura_ref") : null,
+    factura_total: uuid ? num(f, "factura_total") || null : null,
   };
   // Factura dividida en un gasto por concepto (viene del lector de XML)
   const pDesc = f.getAll("p_desc").map((v) => String(v).trim());
@@ -130,8 +138,10 @@ export async function marcarPagos(f: FormData) {
   const sel = f.getAll("sel").map(String);
   const ids = (origen: string) => sel.filter((x) => x.startsWith(`${origen}:`)).map((x) => x.slice(origen.length + 1));
   const cambios = { pagado, fecha_pago: fecha, referencia_pago: referencia };
-  const gastos = ids("gasto").map(Number).filter(Boolean);
+  let gastos = ids("gasto").map(Number).filter(Boolean);
   const hojas = ids("hoja").filter((x) => /^[0-9a-f-]{36}$/.test(x));
+  // Los conceptos de una misma factura se pagan (o regresan a pendiente) juntos
+  if (gastos.length) gastos = await conFactura(supabase, gastos);
   const regreso = txt(f, "volver") || "/admin/gastos";
   if (!gastos.length && !hojas.length) redirect(`${regreso}${regreso.includes("?") ? "&" : "?"}error=${encodeURIComponent("Selecciona al menos un concepto.")}#pendientes`);
   if (gastos.length) await supabase.from("gastos").update(cambios).in("id", gastos);
@@ -141,9 +151,20 @@ export async function marcarPagos(f: FormData) {
   redirect(`${regreso}${regreso.includes("?") ? "&" : "?"}ok=${pagado ? `pagados-${n}` : "pendiente"}#pendientes`);
 }
 
+/** Agrega a la lista todos los gastos que comparten factura (UUID) con los indicados. */
+async function conFactura(supabase: Awaited<ReturnType<typeof db>>, ids: number[]) {
+  const { data } = await supabase.from("gastos").select("factura_uuid").in("id", ids).not("factura_uuid", "is", null);
+  const uuids = Array.from(new Set((data ?? []).map((x) => x.factura_uuid as string)));
+  if (!uuids.length) return ids;
+  const { data: hermanos } = await supabase.from("gastos").select("id").in("factura_uuid", uuids);
+  return Array.from(new Set([...ids, ...(hermanos ?? []).map((x) => x.id as number)]));
+}
+
+/** Borra un gasto; si viene de una factura dividida, borra la factura completa para no dejarla incompleta. */
 export async function borrarGasto(f: FormData) {
   const supabase = await db();
-  await supabase.from("gastos").delete().eq("id", num(f, "id"));
+  const ids = await conFactura(supabase, [num(f, "id")]);
+  await supabase.from("gastos").delete().in("id", ids);
   revalidatePath("/admin", "layout");
 }
 

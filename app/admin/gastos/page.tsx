@@ -11,6 +11,33 @@ import { borrarGasto, guardarAjustes, marcarPagos } from "../acciones-modulos";
 
 const ORIGEN: Record<string, [string, string]> = { hoja: ["Hoja de servicio", "neutral"], gasto: ["Gasto", "warn"], caja: ["Caja chica", "ok"] };
 type F = { mes?: string; zona?: string; pago?: string; ok?: string; error?: string };
+type Fila = GastoV & { partes?: GastoV[] };
+
+/** Junta en un solo renglón los conceptos que vienen de la misma factura (se pagan juntos). */
+function porFactura(lista: GastoV[]): Fila[] {
+  const out: Fila[] = [];
+  const grupos = new Map<string, Fila>();
+  for (const x of lista) {
+    const u = x.origen === "gasto" ? x.factura_uuid : null;
+    if (!u) { out.push(x); continue; }
+    const g = grupos.get(u);
+    if (!g) {
+      const nuevo: Fila = { ...x, partes: [x] };
+      grupos.set(u, nuevo);
+      out.push(nuevo);
+    } else {
+      g.partes!.push(x);
+      g.monto = Number(g.monto) + Number(x.monto);
+    }
+  }
+  for (const g of grupos.values()) {
+    if (g.partes!.length > 1) {
+      g.concepto = `${g.factura_ref ?? "Factura"} · ${g.partes!.length} conceptos`;
+      g.categoria = Array.from(new Set(g.partes!.map((p) => p.categoria))).join(", ");
+    } else delete g.partes;
+  }
+  return out;
+}
 
 export default async function Gastos({ searchParams }: { searchParams: Promise<F> }) {
   await requireAdmin();
@@ -35,13 +62,15 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
   ]);
   const delMes = (v ?? []) as GastoV[];
   const filas = f.pago === "Pendiente" ? delMes.filter((x) => !x.pagado) : f.pago === "Pagado" ? delMes.filter((x) => x.pagado) : delMes;
-  const pendientes = (pend ?? []) as GastoV[];
+  const pendientes = porFactura((pend ?? []) as GastoV[]);
   const facturas = new Map(((gm ?? []) as Pick<Gasto, "id" | "factura_path">[]).map((x) => [String(x.id), x.factura_path]));
   const urls = await enlaces(supabase, "facturas", Array.from(facturas.values()));
   const sucursales = (suc ?? []) as { id: number; nombre: string; zona: string }[];
   const zonas = Array.from(new Set(sucursales.map((s) => s.zona)));
   const categorias = Array.from(new Set([...(eqs ?? []).map((e) => e.categoria as string), ...CATEGORIAS_EXTRA]));
 
+  const hermanos = new Map<string, number>();
+  delMes.forEach((x) => { if (x.origen === "gasto" && x.factura_uuid) hermanos.set(x.factura_uuid, (hermanos.get(x.factura_uuid) ?? 0) + 1); });
   const total = delMes.reduce((s, x) => s + Number(x.monto), 0);
   const pendMes = delMes.filter((x) => !x.pagado).reduce((s, x) => s + Number(x.monto), 0);
   const porCat = new Map<string, number>();
@@ -63,10 +92,11 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
   const benef = Array.from(porBenef.entries()).sort((a, b) => b[1].monto - a[1].monto);
   const texto =
     `Mantenimiento · trabajos realizados pendientes de pago (corte ${fCorta(h)})\n` +
-    `Total pendiente: ${mxn(totalPend)} en ${pendientes.length} concepto${pendientes.length !== 1 ? "s" : ""}\n\n` +
+    `Total pendiente: ${mxn(totalPend)} en ${pendientes.length} pago${pendientes.length !== 1 ? "s" : ""}\n\n` +
     benef.map(([b, e]) => `${b}: ${mxn(e.monto)} (${e.n})`).join("\n") +
     "\n\nDetalle:\n" +
-    pendientes.map((x) => `${fCorta(x.fecha)} | ${x.sucursal ?? "General"} | ${x.concepto} | ${x.beneficiario ?? "—"} | ${mxn(Number(x.monto))} | ${diasEntre(x.fecha, h)} días`).join("\n");
+    pendientes.map((x) => `${fCorta(x.fecha)} | ${x.sucursal ?? "General"} | ${x.concepto} | ${x.beneficiario ?? "—"} | ${mxn(Number(x.monto))} | ${diasEntre(x.fecha, h)} días` +
+      (x.partes ? x.partes.map((p) => `\n    · ${p.categoria}: ${p.concepto.split(" · ")[0]} ${mxn(Number(p.monto))}`).join("") : "")).join("\n");
   const volver = `/admin/gastos?mes=${mes}${f.zona ? `&zona=${encodeURIComponent(f.zona)}` : ""}${f.pago ? `&pago=${f.pago}` : ""}`;
 
   const okMsg = f.ok === "1" ? "Gasto registrado." : f.ok?.startsWith("partidas-") ? `Factura registrada como ${f.ok.slice(9)} gastos, uno por concepto.` : f.ok === "pendiente" ? "Concepto regresado a pendiente de pago." : f.ok?.startsWith("pagados-") ? `${f.ok.slice(8)} concepto(s) marcados como pagados.` : null;
@@ -132,7 +162,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
         </div>
 
         <div className="kpis" style={{ marginBottom: 14 }}>
-          <div className="kpi"><span className="eyebrow">Total pendiente</span><span className="v" style={{ color: totalPend ? "var(--warn)" : "var(--ok)" }}>{mxn(totalPend)}</span><span className="s">{pendientes.length} concepto{pendientes.length !== 1 ? "s" : ""}</span></div>
+          <div className="kpi"><span className="eyebrow">Total pendiente</span><span className="v" style={{ color: totalPend ? "var(--warn)" : "var(--ok)" }}>{mxn(totalPend)}</span><span className="s">{pendientes.length} pago{pendientes.length !== 1 ? "s" : ""} por hacer</span></div>
           <div className="kpi"><span className="eyebrow">Más antiguo</span><span className="v">{masAntiguo}<span style={{ fontSize: 16, color: "var(--muted)" }}> días</span></span><span className="s">{pendientes[0] ? fCorta(pendientes[0].fecha) : "Sin pendientes"}</span></div>
           <div className="kpi"><span className="eyebrow">Con más de 30 días</span><span className="v" style={{ color: pendientes.some((x) => diasEntre(x.fecha, h) > 30) ? "var(--bad)" : undefined }}>{mxn(pendientes.filter((x) => diasEntre(x.fecha, h) > 30).reduce((s, x) => s + Number(x.monto), 0))}</span><span className="s">Priorizar con dirección</span></div>
           <div className="kpi"><span className="eyebrow">Por proveedor / técnico</span>
@@ -160,7 +190,14 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
                         <td className="r"><span className={`pill ${d > 30 ? "bad" : d > 15 ? "warn" : "neutral"} num`}>{d}</span></td>
                         <td><span className={`pill ${oc}`}>{o}</span></td>
                         <td>{x.sucursal ?? "General"}</td>
-                        <td>{x.origen === "hoja" ? <Link href={`/admin/hojas/${x.ref}`}>{x.concepto}</Link> : x.concepto}</td>
+                        <td>
+                          {x.origen === "hoja" ? <Link href={`/admin/hojas/${x.ref}`}>{x.concepto}</Link> : x.concepto}
+                          {x.partes && (
+                            <ul className="fac-partes">
+                              {x.partes.map((p) => <li key={p.ref}><span>{p.categoria} · {p.concepto.split(" · ")[0]}</span><b>{mxn(Number(p.monto))}</b></li>)}
+                            </ul>
+                          )}
+                        </td>
                         <td>{x.beneficiario ?? <span style={{ color: "var(--muted)" }}>—</span>}</td>
                         <td className="r num"><b>{mxn(Number(x.monto))}</b></td>
                       </tr>
@@ -170,7 +207,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
               </table>
             </div>
             <div className="pay-bar">
-              <span className="sub" style={{ margin: 0 }}>Marca los conceptos que ya se pagaron:</span>
+              <span className="sub" style={{ margin: 0 }}>Marca lo que ya se pagó (las facturas se pagan completas):</span>
               <label className="field">Fecha de pago<input id="p-fecha" name="fecha_pago" type="date" defaultValue={h} /></label>
               <label className="field">Referencia<input id="p-ref" name="referencia_pago" placeholder="Transferencia, cheque…" /></label>
               <button className="btn primary" type="submit">Marcar seleccionados como pagados</button>
@@ -206,13 +243,14 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
               {filas.map((x) => {
                 const [o, oc] = ORIGEN[x.origen] ?? ["", "neutral"];
                 const fac = x.origen === "gasto" ? facturas.get(x.ref) : null;
+                const nFac = x.factura_uuid ? hermanos.get(x.factura_uuid) ?? 1 : 1;
                 return (
                   <tr key={x.origen + x.ref}>
                     <td className="num">{fCorta(x.fecha)}</td>
                     <td><span className={`pill ${oc}`}>{o}</span></td>
                     <td>{x.sucursal ?? <span style={{ color: "var(--muted)" }}>General</span>}</td>
                     <td>{x.categoria}<br /><small style={{ color: "var(--muted)" }}>{x.tipo}</small></td>
-                    <td>{x.origen === "hoja" ? <Link href={`/admin/hojas/${x.ref}`}>{x.concepto}</Link> : x.concepto}{x.beneficiario && x.origen !== "caja" && <><br /><small style={{ color: "var(--muted)" }}>{x.beneficiario}</small></>}</td>
+                    <td>{x.origen === "hoja" ? <Link href={`/admin/hojas/${x.ref}`}>{x.concepto}</Link> : x.concepto}{x.beneficiario && x.origen !== "caja" && <><br /><small style={{ color: "var(--muted)" }}>{x.beneficiario}</small></>}{nFac > 1 && <><br /><span className="fac-tag" title="Se paga y se borra junto con los demás conceptos de la factura">{x.factura_ref} · {nFac} conceptos · total {mxn(Number(x.factura_total ?? 0))}</span></>}</td>
                     <td className="r num">{mxn(Number(x.monto))}</td>
                     <td>
                       {x.pagado ? (
@@ -226,12 +264,12 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
                             <input type="hidden" name="volver" value={volver} />
                             <input type="hidden" name="sel" value={`${x.origen}:${x.ref}`} />
                             <input type="hidden" name="pagado" value={String(!x.pagado)} />
-                            <button className="btn small" type="submit">{x.pagado ? "Regresar a pendiente" : "Marcar pagado hoy"}</button>
+                            <button className="btn small" type="submit">{x.pagado ? (nFac > 1 ? "Regresar factura a pendiente" : "Regresar a pendiente") : nFac > 1 ? "Marcar factura pagada hoy" : "Marcar pagado hoy"}</button>
                           </form>
                         )}
                         {fac && urls.get(fac) && <a className="btn small" href={urls.get(fac)} target="_blank" rel="noopener noreferrer">Factura</a>}
                         {x.origen === "gasto" && (
-                          <form action={borrarGasto}><input type="hidden" name="id" value={x.ref} /><button className="btn small danger" type="submit">Borrar</button></form>
+                          <form action={borrarGasto}><input type="hidden" name="id" value={x.ref} /><button className="btn small danger" type="submit">{nFac > 1 ? `Borrar factura (${nFac})` : "Borrar"}</button></form>
                         )}
                       </div>
                     </td>
