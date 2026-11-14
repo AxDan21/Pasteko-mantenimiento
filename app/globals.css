@@ -992,3 +992,9 @@ a.ax-lane:hover .ax-lane-name b { color: var(--brand); }
   .mapa-map { height: 58vh; min-height: 340px; }
   .mapa-side { max-height: none; }
 }
+/* Mapa base en modo oscuro: se invierten los colores del mapa (no los pines) */
+@media (prefers-color-scheme: dark) {
+  .mapa-map .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.88) saturate(.7); }
+  .mapa-map .leaflet-control-attribution { background: rgba(20, 18, 16, .75); color: #bbb; }
+  .mapa-map .leaflet-control-attribution a { color: #fdba7f; }
+}

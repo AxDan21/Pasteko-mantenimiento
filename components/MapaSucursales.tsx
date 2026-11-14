@@ -24,11 +24,9 @@ type Estado = keyof typeof ESTADOS;
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const iniciales = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-const TILES = {
-  claro: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-  oscuro: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-};
-const ATRIBUCION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+// Mapa base de OpenStreetMap: gratuito y sin clave. En modo oscuro se oscurece con CSS (.mapa-map).
+const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const ATRIBUCION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
 export default function MapaSucursales({ sucursales, tecnicos }: { sucursales: PinSucursal[]; tecnicos: PinTecnico[] }) {
   const caja = useRef<HTMLDivElement>(null);
@@ -51,7 +49,6 @@ export default function MapaSucursales({ sucursales, tecnicos }: { sucursales: P
   // Crear el mapa una sola vez (Leaflet solo existe en el navegador)
   useEffect(() => {
     let vivo = true;
-    let quitarTema: (() => void) | undefined;
     (async () => {
       const mod = await import("leaflet");
       // Leaflet se publica como CommonJS: según el empaquetador llega en .default o directo
@@ -59,11 +56,7 @@ export default function MapaSucursales({ sucursales, tecnicos }: { sucursales: P
       if (!vivo || !caja.current || mapa.current) return;
       L.current = lib;
       const m = lib.map(caja.current, { zoomControl: true, attributionControl: true, scrollWheelZoom: true });
-      const oscuro = window.matchMedia("(prefers-color-scheme: dark)");
-      let fondo = lib.tileLayer(oscuro.matches ? TILES.oscuro : TILES.claro, { attribution: ATRIBUCION, maxZoom: 19, subdomains: "abcd" }).addTo(m);
-      const cambiarTema = () => { m.removeLayer(fondo); fondo = lib.tileLayer(oscuro.matches ? TILES.oscuro : TILES.claro, { attribution: ATRIBUCION, maxZoom: 19, subdomains: "abcd" }).addTo(m); };
-      oscuro.addEventListener("change", cambiarTema);
-      quitarTema = () => oscuro.removeEventListener("change", cambiarTema);
+      lib.tileLayer(TILES, { attribution: ATRIBUCION, maxZoom: 19 }).addTo(m);
       capa.current = lib.layerGroup().addTo(m);
       const puntos = [...sucursales, ...tecnicos].map((p) => [p.lat, p.lng] as [number, number]);
       if (puntos.length > 1) m.fitBounds(puntos, { padding: [40, 40], maxZoom: 13 });
@@ -73,7 +66,6 @@ export default function MapaSucursales({ sucursales, tecnicos }: { sucursales: P
     })();
     return () => {
       vivo = false;
-      quitarTema?.();
       mapa.current?.remove();
       mapa.current = null;
     };
