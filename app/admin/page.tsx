@@ -152,7 +152,11 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
   const sinFactura = (c ?? []).filter((x) => !x.factura_path).length;
   const cajaUsada = (c ?? []).reduce((s, x) => s + Number(x.monto), 0);
   const cajaSaldo = ajustes.fondo_caja_chica - cajaUsada;
+  const { data: tkA } = await supabase.from("tickets").select("prioridad, estado").in("estado", ["abierto", "asignado", "en_proceso"]);
+  const tkUrg = (tkA ?? []).filter((x) => x.prioridad === "alta").length;
   const alertas = [
+    [tkUrg, "bad", "reportes urgentes de tiendas", "/admin/tickets"],
+    [(tkA ?? []).length - tkUrg, "warn", "reportes de tiendas abiertos", "/admin/tickets"],
     [vencidos.length, "bad", "preventivos vencidos", "/admin/preventivos?estado=Vencido"],
     [pagadoGarantia.length, "bad", "reparaciones pagadas en garantía", "/admin/activos?rec=garantia"],
     [reemplazo.length, "bad", "equipos para evaluar reemplazo", "/admin/activos?rec=Evaluar%20reemplazo"],

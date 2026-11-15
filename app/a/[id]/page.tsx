@@ -6,6 +6,7 @@ import { sesion } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { fecha, folio } from "@/lib/format";
 import { estadoGarantia, fCorta, hoy } from "@/lib/panel";
+import { ESTADOS, folioTicket, hace, type EstadoTicket } from "@/lib/tickets";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,8 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
   const interno = !!s?.perfil?.activo && s.perfil.rol !== "supervisor" && s.perfil.rol !== "consulta";
   const supervisor = s?.perfil?.rol === "supervisor" && s.perfil.activo;
   const admin = s?.perfil?.rol === "admin";
+  const { data: ab } = await supabase.rpc("ticket_abierto", { p_activo: eq.id });
+  const abierto = ((ab ?? []) as { folio: number; token: string; estado: EstadoTicket; creado: string }[])[0];
 
   let servicios: Servicio[] = [];
   let ficha: { marca: string | null; modelo: string | null; serie: string | null; garantia_hasta: string | null; ficha_path: string | null; descripcion: string | null } | null = null;
@@ -65,10 +68,25 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
 
         {!interno && (
           <div className="stack">
+            {!supervisor && abierto && (
+              <Link href={`/t/${abierto.token}`} className="tk-ya card">
+                <span className={`pill ${ESTADOS[abierto.estado].clase}`}>{ESTADOS[abierto.estado].nombre}</span>
+                <span>
+                  <b>Reporte {folioTicket(abierto.folio)} en atención</b>
+                  <small>Abierto hace {hace(abierto.creado)}. Toca para ver el avance.</small>
+                </span>
+              </Link>
+            )}
+            {!supervisor && (
+              <Link href={`/a/${eq.id}/reportar`} className="card scan-cta tk-cta">
+                <b>¿Tiene una falla? Repórtala aquí</b>
+                <span>Ya sabemos qué equipo es y de qué tienda. Toma menos de un minuto →</span>
+              </Link>
+            )}
             {eq.slug && (
               <Link href={`/equipo/${eq.slug}`} className="card scan-cta">
-                <b>¿Tiene una falla?</b>
-                <span>Ver videos y pasos para resolver lo más común de este equipo →</span>
+                <b>Guía rápida del equipo</b>
+                <span>Videos y pasos para resolver lo más común →</span>
               </Link>
             )}
             {!supervisor && (
@@ -89,7 +107,7 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
               </div>
             )}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <Link className="btn primary" href={`/servicio/nueva?activo=${eq.id}`}>+ Hoja de servicio para este equipo</Link>
+              <Link className="btn primary" href={`/servicio/nueva?activo=${eq.id}${abierto ? `&ticket=${folioTicket(abierto.folio)}` : ""}`}>+ Hoja de servicio{abierto ? ` (cierra ${folioTicket(abierto.folio)})` : " para este equipo"}</Link>
               {admin && <Link className="btn" href={`/admin/activos/${eq.id}`}>Ficha completa con costos</Link>}
               {eq.slug && <Link className="btn" href={`/equipo/${eq.slug}`}>Guía de la tienda</Link>}
             </div>

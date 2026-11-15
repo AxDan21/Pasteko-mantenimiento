@@ -5,6 +5,7 @@ import { useEffect, useRef } from "react";
 
 const TABS = [
   ["/admin", "Resumen"],
+  ["/admin/tickets", "Reportes"],
   ["/admin/hojas", "Hojas de servicio"],
   ["/admin/preventivos", "Preventivos"],
   ["/admin/gastos", "Gastos"],

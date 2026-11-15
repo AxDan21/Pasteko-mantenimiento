@@ -14,13 +14,14 @@ type Props = {
   preventivos?: { id: number; fecha: string; sucursal_id: number; equipo: string; activo_id: string | null; tarea: string }[];
   /** Código del equipo escaneado (QR): preselecciona sucursal y equipo. */
   activoInicial?: string;
+  ticketInicial?: string;
 };
 
 type Foto = { id: string; blob: Blob; url: string };
 const MAX_FOTOS = 8;
 const BORRADOR = "pk-hoja-borrador";
 
-export default function FormHoja({ sucursales, equipos, activos = [], preventivos = [], activoInicial }: Props) {
+export default function FormHoja({ sucursales, equipos, activos = [], preventivos = [], activoInicial, ticketInicial }: Props) {
   const router = useRouter();
   const firma = useRef<FirmaHandle>(null);
   const [firmaVacia, setFirmaVacia] = useState(true);
@@ -53,6 +54,7 @@ export default function FormHoja({ sucursales, equipos, activos = [], preventivo
         setActivoId(b.activoId ?? ""); setPreventivoId(b.preventivoId ?? "");
       }
     } catch {}
+    if (ticketInicial) { setTicket(ticketInicial); setTipo("Correctivo"); }
     const a = activoInicial ? activos.find((x) => x.id === activoInicial) : undefined;
     if (a) {
       setSucursal(String(a.sucursal_id));
@@ -243,8 +245,9 @@ export default function FormHoja({ sucursales, equipos, activos = [], preventivo
             </label>
           )}
           <label className="field">
-            Ticket de osTicket (opcional)
-            <input id="h-ticket" value={ticket} onChange={(e) => setTicket(e.target.value)} inputMode="numeric" placeholder="Ej. 58207" />
+            Ticket (opcional)
+            <input id="h-ticket" value={ticket} onChange={(e) => setTicket(e.target.value)} placeholder="MT-0012 o número de osTicket" />
+            {/^\s*MT-?\d+\s*$/i.test(ticket) && <span className="hint">Al enviar la hoja, el reporte {ticket.trim().toUpperCase()} se marca como resuelto y la tienda lo ve.</span>}
           </label>
           {activosSuc.length > 0 && (
             <label className="field">

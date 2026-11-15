@@ -5,8 +5,8 @@ import FormHoja from "@/components/FormHoja";
 import { sesion } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function NuevaHoja({ searchParams }: { searchParams: Promise<{ activo?: string }> }) {
-  const { activo } = await searchParams;
+export default async function NuevaHoja({ searchParams }: { searchParams: Promise<{ activo?: string; ticket?: string }> }) {
+  const { activo, ticket } = await searchParams;
   const s = await sesion();
   if (!s?.perfil) redirect("/login");
   if (s.perfil.rol === "supervisor") redirect("/censo");
@@ -38,6 +38,7 @@ export default async function NuevaHoja({ searchParams }: { searchParams: Promis
           activos={activos ?? []}
           preventivos={preventivos ?? []}
           activoInicial={activo?.toUpperCase()}
+          ticketInicial={ticket && /^MT-\d+$/i.test(ticket) ? ticket.toUpperCase() : undefined}
         />
       </main>
     </>
