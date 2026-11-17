@@ -1461,3 +1461,10 @@ a:hover > .pt-go { background: #141210; color: #fff; border-color: #141210; tran
   .tk-pasos li span:last-child { font-size: 11px; }
   .tkb-k b { font-size: 26px; }
 }
+
+/* Caja chica por XML */
+.caja-manual { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+.caja-manual summary { cursor: pointer; font-size: 13px; font-weight: 700; color: var(--muted); }
+.caja-manual .inline-form { margin-top: 10px; }
+.caja-prov { display: block; font-size: 13px; }
+.cfdi-res.on { border-color: var(--orange); }

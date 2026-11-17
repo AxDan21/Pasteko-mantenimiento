@@ -56,8 +56,8 @@ export function cifrar(texto: string, sub: { p256dh: string; auth: string }) {
   return Buffer.concat([salt, rs, Buffer.from([asPublic.length]), asPublic, cuerpo]);
 }
 
-/** Envía a una suscripción. Devuelve false si la suscripción ya no existe (hay que borrarla). */
-async function enviarUno(sub: Suscripcion, aviso: Aviso): Promise<boolean> {
+/** Envía a una suscripción: "ok", "muerta" (ya no existe, hay que borrarla) o "error". */
+async function enviarUno(sub: Suscripcion, aviso: Aviso): Promise<"ok" | "muerta" | "error"> {
   const publica = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
   const privada = process.env.VAPID_PRIVATE_KEY!;
   const sujeto = process.env.VAPID_SUBJECT || "mailto:mantenimiento@pasteko.com";
@@ -73,9 +73,12 @@ async function enviarUno(sub: Suscripcion, aviso: Aviso): Promise<boolean> {
     body: new Uint8Array(cifrar(JSON.stringify(aviso), sub)),
     signal: AbortSignal.timeout(8000),
   });
-  if (res.status === 404 || res.status === 410) return false;
-  if (!res.ok) console.error("push", res.status, await res.text().catch(() => ""));
-  return true;
+  if (res.status === 404 || res.status === 410) return "muerta";
+  if (!res.ok) {
+    console.error("push", new URL(sub.endpoint).host, res.status, await res.text().catch(() => ""));
+    return "error";
+  }
+  return "ok";
 }
 
 /** Avisa a los usuarios indicados (o a todos los administradores). Nunca lanza error. */
@@ -92,9 +95,11 @@ export async function avisar(aviso: Aviso, usuarios?: string[]) {
     const { data: subs } = await db.from("push_suscripciones").select("endpoint, p256dh, auth").in("usuario_id", ids);
     const lista = (subs ?? []) as Suscripcion[];
     const res = await Promise.allSettled(lista.map((s) => enviarUno(s, aviso)));
-    const muertas = lista.filter((_, i) => res[i].status === "fulfilled" && (res[i] as PromiseFulfilledResult<boolean>).value === false);
+    const valor = (i: number) => (res[i].status === "fulfilled" ? (res[i] as PromiseFulfilledResult<string>).value : "error");
+    res.forEach((r, i) => { if (r.status === "rejected") console.error("push", new URL(lista[i].endpoint).host, r.reason); });
+    const muertas = lista.filter((_, i) => valor(i) === "muerta");
     if (muertas.length) await db.from("push_suscripciones").delete().in("endpoint", muertas.map((m) => m.endpoint));
-    return res.filter((r) => r.status === "fulfilled" && r.value).length;
+    return lista.filter((_, i) => valor(i) === "ok").length;
   } catch (e) {
     console.error("avisar", e);
     return 0;

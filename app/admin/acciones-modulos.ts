@@ -311,6 +311,56 @@ export async function crearMovCaja(f: FormData) {
   redirect(`/admin/caja?mes=${txt(f, "fecha").slice(0, 7)}&ok=1`);
 }
 
+/** Caja chica desde el XML + PDF de la factura: los datos vienen del CFDI, solo se elige la sucursal. */
+export async function crearMovCajaCfdi(f: FormData) {
+  const supabase = await db();
+  const fecha = txt(f, "fecha");
+  const uuid = txt(f, "factura_uuid").toUpperCase();
+  const volver = `/admin/caja?mes=${fecha.slice(0, 7)}`;
+  if (!uuid) redirect(`${volver}&error=${encodeURIComponent("El XML no trae folio fiscal (UUID). Revisa que sea una factura timbrada.")}`);
+  const [{ data: enCaja }, { data: enGastos }] = await Promise.all([
+    supabase.from("caja_chica").select("fecha, concepto").eq("factura_uuid", uuid).limit(1).maybeSingle(),
+    supabase.from("gastos").select("fecha, concepto").eq("factura_uuid", uuid).limit(1).maybeSingle(),
+  ]);
+  const previo = enCaja ?? enGastos;
+  if (previo) redirect(`${volver}&error=${encodeURIComponent(`Esta factura ya está registrada en ${enCaja ? "caja chica" : "gastos"} (${previo.fecha} · ${previo.concepto}). No se volvió a guardar.`)}`);
+  const pdf = f.get("factura");
+  if (!(pdf instanceof File) || pdf.size === 0) redirect(`${volver}&error=${encodeURIComponent("Falta el PDF de la factura.")}`);
+
+  const carpeta = `caja/${fecha.slice(0, 7)}`;
+  let factura: string | null = null, xml: string | null = null;
+  try {
+    factura = await subirFactura(supabase, f, carpeta);
+    const texto = String(f.get("xml_texto") ?? "");
+    if (texto) {
+      xml = `${carpeta}/${uuid}.xml`;
+      const { error: ex } = await supabase.storage.from("facturas").upload(xml, new Blob([texto], { type: "application/xml" }), { contentType: "application/xml", upsert: true });
+      if (ex) throw new Error(`No se pudo guardar el XML: ${ex.message}`);
+    }
+  } catch (e) {
+    if (factura) await supabase.storage.from("facturas").remove([factura]);
+    redirect(`${volver}&error=${encodeURIComponent((e as Error).message)}`);
+  }
+  const { error } = await supabase.from("caja_chica").insert({
+    fecha,
+    concepto: txt(f, "concepto") || "Factura",
+    sucursal_id: opcNum(f, "sucursal_id"),
+    monto: num(f, "monto"),
+    factura_path: factura,
+    xml_path: xml,
+    factura_uuid: uuid,
+    factura_ref: opcTxt(f, "factura_ref"),
+    proveedor: opcTxt(f, "proveedor"),
+    rfc: opcTxt(f, "rfc"),
+  });
+  if (error) {
+    await supabase.storage.from("facturas").remove([factura, xml].filter((x): x is string => !!x));
+    redirect(`${volver}&error=${encodeURIComponent(error.message)}`);
+  }
+  revalidatePath("/admin", "layout");
+  redirect(`${volver}&ok=1`);
+}
+
 export async function adjuntarFacturaCaja(f: FormData) {
   const supabase = await db();
   const id = num(f, "id");
@@ -326,7 +376,10 @@ export async function adjuntarFacturaCaja(f: FormData) {
 
 export async function borrarMovCaja(f: FormData) {
   const supabase = await db();
+  const { data: m } = await supabase.from("caja_chica").select("factura_path, xml_path").eq("id", num(f, "id")).maybeSingle();
   await supabase.from("caja_chica").delete().eq("id", num(f, "id"));
+  const rutas = [m?.factura_path, m?.xml_path].filter((x): x is string => !!x);
+  if (rutas.length) await supabase.storage.from("facturas").remove(rutas);
   revalidatePath("/admin", "layout");
 }
 

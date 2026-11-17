@@ -87,7 +87,10 @@ export type Gasto = {
   monto: number; proveedor_id: number | null; activo_id: string | null; factura_path: string | null;
 };
 
-export type MovCaja = { id: number; fecha: string; concepto: string; sucursal_id: number | null; monto: number; factura_path: string | null };
+export type MovCaja = {
+  id: number; fecha: string; concepto: string; sucursal_id: number | null; monto: number; factura_path: string | null;
+  factura_uuid?: string | null; factura_ref?: string | null; proveedor?: string | null; rfc?: string | null; xml_path?: string | null;
+};
 
 export type Refaccion2 = { id: number; codigo: string | null; nombre: string; equipo: string | null; ubicacion: string; stock: number; minimo: number; costo: number };
 

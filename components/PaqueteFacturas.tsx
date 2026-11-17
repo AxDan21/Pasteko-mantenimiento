@@ -25,7 +25,7 @@ function bajar(blob: Blob, nombre: string) {
  * un ZIP con PDF y XML de cada una (para adjuntar al correo) y un solo PDF para imprimir.
  * Todo se arma en el navegador con los archivos guardados en la app.
  */
-export default function PaqueteFacturas({ facturas, etiqueta }: { facturas: ArchivoFactura[]; etiqueta: string }) {
+export default function PaqueteFacturas({ facturas, etiqueta, titulo = "Facturas pendientes de pago" }: { facturas: ArchivoFactura[]; etiqueta: string; titulo?: string }) {
   const [estado, setEstado] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const conPdf = facturas.filter((f) => f.pdf).length;
@@ -48,7 +48,7 @@ export default function PaqueteFacturas({ facturas, etiqueta }: { facturas: Arch
         }
       }
       setEstado("Comprimiendo…");
-      bajar(await z.generateAsync({ type: "blob" }), `Facturas pendientes de pago - ${etiqueta}.zip`);
+      bajar(await z.generateAsync({ type: "blob" }), `${titulo} - ${etiqueta}.zip`);
       setEstado(faltan ? `ZIP listo. Faltaron ${faltan} archivo(s): revisa las facturas sin PDF o XML.` : "ZIP listo: adjúntalo al correo para Tesorería.");
     } catch (e) {
       setEstado(`No se pudo armar el ZIP: ${(e as Error).message}`);

@@ -1,4 +1,6 @@
+import CajaCfdi from "@/components/CajaCfdi";
 import CopiarTexto from "@/components/CopiarTexto";
+import PaqueteFacturas, { type ArchivoFactura } from "@/components/PaqueteFacturas";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { enlaces, leerAjustes } from "@/lib/datos";
@@ -19,11 +21,18 @@ export default async function CajaChica({ searchParams }: { searchParams: Promis
     supabase.from("sucursales").select("id, nombre").order("nombre"),
   ]);
   const movs = (c ?? []) as MovCaja[];
-  const urls = await enlaces(supabase, "facturas", movs.map((m) => m.factura_path));
+  const urls = await enlaces(supabase, "facturas", movs.flatMap((m) => [m.factura_path, m.xml_path ?? null]));
   const sucPorId = new Map((suc ?? []).map((s) => [s.id as number, s.nombre as string]));
   const gastado = movs.reduce((s, m) => s + Number(m.monto), 0);
   const saldo = ajustes.fondo_caja_chica - gastado;
   const sinF = movs.filter((m) => !m.factura_path);
+  const paquete: ArchivoFactura[] = movs
+    .filter((m) => m.factura_path || m.xml_path)
+    .map((m) => ({
+      nombre: `${m.fecha} - ${m.proveedor ?? m.concepto.slice(0, 40)} - ${m.factura_uuid ? `UUID ${m.factura_uuid.slice(0, 8)} - ` : ""}${mxn(Number(m.monto))}`,
+      pdf: m.factura_path ? urls.get(m.factura_path) ?? null : null,
+      xml: m.xml_path ? urls.get(m.xml_path) ?? null : null,
+    }));
 
   const comprobacion =
     `Comprobación de caja chica · Mantenimiento · ${nombreMes(mes)}\n` +
@@ -31,7 +40,7 @@ export default async function CajaChica({ searchParams }: { searchParams: Promis
     movs
       .slice()
       .reverse()
-      .map((m) => `${fCorta(m.fecha)} | ${m.concepto} | ${m.sucursal_id ? sucPorId.get(m.sucursal_id) : "General"} | ${mxn(Number(m.monto))} | ${m.factura_path ? "Con factura" : "SIN FACTURA"}`)
+      .map((m) => `${fCorta(m.fecha)} | ${m.proveedor ? `${m.proveedor} · ` : ""}${m.concepto} | ${m.sucursal_id ? sucPorId.get(m.sucursal_id) : "General"} | ${mxn(Number(m.monto))} | ${m.factura_uuid ? `UUID ${m.factura_uuid}` : m.factura_path ? "Con comprobante" : "SIN FACTURA"}`)
       .join("\n");
 
   return (
@@ -58,21 +67,28 @@ export default async function CajaChica({ searchParams }: { searchParams: Promis
       </div>
 
       <section className="card" style={{ marginBottom: 18 }}>
-        <h3>Registrar gasto de caja chica</h3>
-        <p className="sub">Toma foto de la factura o ticket al pagar. También puedes subirla después.</p>
-        <form action={crearMovCaja} className="inline-form">
-          <label className="field">Fecha<input id="c-fecha" name="fecha" type="date" required defaultValue={hoy()} /></label>
-          <label className="field">Sucursal<select id="c-suc" name="sucursal_id" defaultValue=""><option value="">General</option>{(suc ?? []).map((s) => <option key={s.id as number} value={s.id as number}>{s.nombre as string}</option>)}</select></label>
-          <label className="field w2">Concepto<input id="c-con" name="concepto" required placeholder="Ej. Material eléctrico" /></label>
-          <label className="field">Monto<input id="c-monto" name="monto" type="number" min="0.01" step="0.01" required /></label>
-          <label className="field w2">Factura (foto o PDF)<input id="c-fac" name="factura" type="file" accept="image/*,application/pdf" /></label>
-          <button className="btn primary" type="submit">Registrar</button>
-        </form>
+        <h3>Registrar factura</h3>
+        <p className="sub">Suelta el XML y el PDF juntos: proveedor, conceptos, fecha y total se llenan solos. Solo elige la sucursal.</p>
+        <CajaCfdi sucursales={(suc ?? []) as { id: number; nombre: string }[]} hoy={hoy()} saldo={saldo} />
+        <details className="caja-manual">
+          <summary>Gasto sin factura (ticket o nota)</summary>
+          <form action={crearMovCaja} className="inline-form">
+            <label className="field">Fecha<input id="c-fecha" name="fecha" type="date" required defaultValue={hoy()} /></label>
+            <label className="field">Sucursal<select id="c-suc" name="sucursal_id" defaultValue=""><option value="">General</option>{(suc ?? []).map((s) => <option key={s.id as number} value={s.id as number}>{s.nombre as string}</option>)}</select></label>
+            <label className="field w2">Concepto<input id="c-con" name="concepto" required placeholder="Ej. Material eléctrico" /></label>
+            <label className="field">Monto<input id="c-monto" name="monto" type="number" min="0.01" step="0.01" required /></label>
+            <label className="field w2">Foto del ticket<input id="c-fac" name="factura" type="file" accept="image/*,application/pdf" /></label>
+            <button className="btn" type="submit">Registrar</button>
+          </form>
+        </details>
       </section>
 
       <div className="toolbar" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <h3 style={{ fontSize: 17 }}>Movimientos de {nombreMes(mes)}</h3>
-        <CopiarTexto texto={movs.length ? comprobacion : ""} etiqueta="Copiar comprobación para contabilidad" />
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          {paquete.length > 0 && <PaqueteFacturas facturas={paquete} etiqueta={nombreMes(mes)} titulo="Caja chica" />}
+          <CopiarTexto texto={movs.length ? comprobacion : ""} etiqueta="Copiar comprobación" />
+        </div>
       </div>
       {movs.length ? (
         <div className="tbl-wrap">
@@ -82,12 +98,15 @@ export default async function CajaChica({ searchParams }: { searchParams: Promis
               {movs.map((m) => (
                 <tr key={m.id}>
                   <td className="num">{fCorta(m.fecha)}</td>
-                  <td>{m.concepto}</td>
+                  <td>{m.proveedor && <b className="caja-prov">{m.proveedor}</b>}{m.concepto}</td>
                   <td>{m.sucursal_id ? sucPorId.get(m.sucursal_id) : "General"}</td>
                   <td className="r num">{mxn(Number(m.monto))}</td>
                   <td>
                     {m.factura_path ? (
-                      <a className="btn small" href={urls.get(m.factura_path)} target="_blank" rel="noopener noreferrer">Ver factura</a>
+                      <span style={{ display: "flex", gap: 6 }}>
+                        <a className="btn small" href={urls.get(m.factura_path)} target="_blank" rel="noopener noreferrer">{m.factura_uuid ? "PDF" : "Ver"}</a>
+                        {m.xml_path && <a className="btn small" href={urls.get(m.xml_path)} target="_blank" rel="noopener noreferrer">XML</a>}
+                      </span>
                     ) : (
                       <form action={adjuntarFacturaCaja} style={{ display: "flex", gap: 6, alignItems: "center" }}>
                         <input type="hidden" name="id" value={m.id} />
