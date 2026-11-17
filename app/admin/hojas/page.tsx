@@ -3,6 +3,9 @@ import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { fecha, folio, mxn } from "@/lib/format";
 import type { Hoja } from "@/lib/types";
+import Seccion from "@/components/Seccion";
+import { vistasServicio } from "@/lib/secciones";
+import { folioTicket } from "@/lib/tickets";
 
 type Filtros = { mes?: string; zona?: string; tecnico?: string; estado?: string; tipo?: string };
 
@@ -33,12 +36,18 @@ export default async function PanelHojas({ searchParams }: { searchParams: Promi
   if (f.estado) q = q.eq("estado", f.estado);
   if (f.tipo) q = q.eq("tipo", f.tipo);
 
-  const [{ data }, { data: zonas }, { data: tecnicos }] = await Promise.all([
+  const [{ data }, { data: zonas }, { data: tecnicos }, vistas] = await Promise.all([
     q,
     supabase.from("sucursales").select("zona").order("zona"),
     supabase.from("perfiles").select("id, nombre").order("nombre"),
+    vistasServicio(supabase),
   ]);
   const hojas = (data ?? []) as Hoja[];
+  // Reportes de tiendas que cerró cada hoja
+  const { data: tks } = hojas.length
+    ? await supabase.from("tickets").select("id, folio, hoja_id").in("hoja_id", hojas.map((h) => h.id))
+    : { data: [] as { id: string; folio: number; hoja_id: string }[] };
+  const reporteDe = new Map<string, { id: string; folio: number }>((tks ?? []).map((t) => [t.hoja_id as string, { id: t.id as string, folio: t.folio as number }]));
   const listaZonas = Array.from(new Set((zonas ?? []).map((z) => z.zona as string)));
 
   const total = hojas.reduce((s, h) => s + Number(h.total), 0);
@@ -51,15 +60,18 @@ export default async function PanelHojas({ searchParams }: { searchParams: Promi
   return (
     <>
       <main className="wrap">
-        <div className="head-row">
-          <div>
-            <p className="eyebrow">Panel de mantenimiento</p>
-            <h1 className="page-h">Hojas de servicio</h1>
-          </div>
-          <a className="btn" href={`/admin/exportar?${new URLSearchParams({ ...f, mes } as Record<string, string>).toString()}`}>
-            Descargar CSV (Excel / Power BI)
-          </a>
-        </div>
+        <Seccion
+          eyebrow="Panel de mantenimiento"
+          titulo="Servicio"
+          sub="Las tiendas reportan desde el QR del equipo; el técnico lo atiende y su hoja de servicio cierra el reporte."
+          vistas={vistas}
+          activa="hojas"
+          acciones={
+            <a className="btn" href={`/admin/exportar?${new URLSearchParams({ ...f, mes } as Record<string, string>).toString()}`}>
+              Descargar CSV
+            </a>
+          }
+        />
 
         <div className="kpis">
           <div className="kpi"><span className="eyebrow">Hojas del mes</span><span className="v">{hojas.length}</span><span className="s">{prev.length} preventivas · {hojas.length - prev.length} correctivas</span></div>
@@ -99,7 +111,7 @@ export default async function PanelHojas({ searchParams }: { searchParams: Promi
           <div className="tbl-wrap">
             <table>
               <thead>
-                <tr><th>Folio</th><th>Fecha</th><th>Sucursal</th><th>Equipo</th><th>Tipo</th><th>Técnico</th><th>Ticket</th><th className="r">Total</th><th>Estado</th></tr>
+                <tr><th>Folio</th><th>Fecha</th><th>Sucursal</th><th>Equipo</th><th>Tipo</th><th>Técnico</th><th>Reporte</th><th className="r">Total</th><th>Estado</th></tr>
               </thead>
               <tbody>
                 {hojas.map((h) => (
@@ -110,7 +122,11 @@ export default async function PanelHojas({ searchParams }: { searchParams: Promi
                     <td>{h.equipo}</td>
                     <td><span className={`pill ${h.tipo === "Preventivo" ? "neutral" : "warn"}`}>{h.tipo}</span></td>
                     <td>{h.tecnico}</td>
-                    <td className="num">{h.ticket ? `#${h.ticket}` : "—"}</td>
+                    <td className="num">
+                      {reporteDe.get(h.id) ? (
+                        <Link className="pill info hoja-tk" href={`/admin/tickets/${reporteDe.get(h.id)!.id}`}>{folioTicket(reporteDe.get(h.id)!.folio)}</Link>
+                      ) : h.ticket ? `#${h.ticket}` : "—"}
+                    </td>
                     <td className="r num">{mxn(Number(h.total))}</td>
                     <td><span className={`pill ${h.estado === "Revisada" ? "ok" : "neutral"}`}>{h.estado}</span></td>
                   </tr>

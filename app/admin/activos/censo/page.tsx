@@ -6,6 +6,8 @@ import { enlaces } from "@/lib/datos";
 import { fCorta } from "@/lib/panel";
 import type { Activo } from "@/lib/types";
 import { validarActivos } from "../../acciones-modulos";
+import Seccion from "@/components/Seccion";
+import { vistasEquipos } from "@/lib/secciones";
 
 type Suc = { id: number; nombre: string; zona: string; supervisor: string | null; censo_completo: boolean; censo_fecha: string | null };
 
@@ -14,10 +16,11 @@ export default async function AvanceCenso({ searchParams }: { searchParams: Prom
   await requireAdmin();
   const f = await searchParams;
   const supabase = await createClient();
-  const [{ data: suc }, { data: act }, { data: per }] = await Promise.all([
+  const [{ data: suc }, { data: act }, { data: per }, vistas] = await Promise.all([
     supabase.from("sucursales").select("id, nombre, zona, supervisor, censo_completo, censo_fecha").eq("activa", true).order("zona").order("nombre"),
     supabase.from("activos").select("*").eq("activo", true).order("registrado", { ascending: false }),
     supabase.from("perfiles").select("id, nombre"),
+    vistasEquipos(supabase),
   ]);
   const sucursales = (suc ?? []) as Suc[];
   const activos = (act ?? []) as Activo[];
@@ -41,14 +44,14 @@ export default async function AvanceCenso({ searchParams }: { searchParams: Prom
 
   return (
     <main className="wrap">
-      <div className="head-row">
-        <div>
-          <p className="eyebrow"><Link href="/admin/activos">Activos y garantías</Link></p>
-          <h1 className="page-h">Censo de equipos</h1>
-          <p className="sub" style={{ margin: 0 }}>Los supervisores registran los equipos de sus sucursales en /censo. Aquí revisas la foto de la ficha técnica y validas.</p>
-        </div>
-        <Link className="btn" href="/censo">Abrir el censo como supervisor</Link>
-      </div>
+      <Seccion
+        eyebrow="Panel de mantenimiento"
+        titulo="Equipos"
+        sub="Los supervisores registran los equipos de sus sucursales en /censo. Aquí revisas la foto de la ficha técnica y validas."
+        vistas={vistas}
+        activa="censo"
+        acciones={<Link className="btn" href="/censo">Abrir el censo como supervisor</Link>}
+      />
 
       {f.ok?.startsWith("validados-") && <div className="note ok" style={{ marginBottom: 14 }}>{f.ok.slice(10)} equipo(s) validados.</div>}
       {f.error && <div className="note bad" style={{ marginBottom: 14 }}>{f.error}</div>}

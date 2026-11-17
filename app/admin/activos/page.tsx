@@ -6,6 +6,8 @@ import { mxn } from "@/lib/format";
 import { edadAnios, estadoGarantia, hoy, recomendacion } from "@/lib/panel";
 import type { Activo } from "@/lib/types";
 import { crearActivo } from "../acciones-modulos";
+import Seccion from "@/components/Seccion";
+import { vistasEquipos } from "@/lib/secciones";
 
 type F = { zona?: string; equipo?: string; rec?: string; bajas?: string; ok?: string; error?: string };
 
@@ -14,12 +16,13 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
   const f = await searchParams;
   const supabase = await createClient();
   const h = hoy();
-  const [{ data: a }, { data: suc }, { data: eqs }, { data: prov }, acum] = await Promise.all([
+  const [{ data: a }, { data: suc }, { data: eqs }, { data: prov }, acum, vistas] = await Promise.all([
     supabase.from("activos").select("*").order("id"),
     supabase.from("sucursales").select("id, nombre, zona").order("zona").order("nombre"),
     supabase.from("equipos").select("nombre").eq("vigente", true).order("orden"),
     supabase.from("proveedores").select("id, nombre").eq("activo", true).order("nombre"),
     acumuladoPorActivo(supabase),
+    vistasEquipos(supabase),
   ]);
   const sucursales = (suc ?? []) as { id: number; nombre: string; zona: string }[];
   const sucPorId = new Map(sucursales.map((s) => [s.id, s]));
@@ -45,17 +48,14 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
 
   return (
     <main className="wrap">
-      <div className="head-row">
-        <div>
-          <p className="eyebrow">Panel de mantenimiento</p>
-          <h1 className="page-h">Activos y garantías</h1>
-        </div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Link className="btn primary" href={`/admin/activos/etiquetas?${new URLSearchParams(f.zona ? { zona: f.zona } : { todas: "1" }).toString()}`}>Imprimir etiquetas QR</Link>
-          <Link className="btn" href="/admin/activos/censo">Censo de equipos</Link>
-          <Link className="btn" href="/admin/exportar?tabla=activos">Descargar CSV</Link>
-        </div>
-      </div>
+      <Seccion
+        eyebrow="Panel de mantenimiento"
+        titulo="Equipos"
+        sub="Inventario con garantías y costo de reparaciones, el censo que hacen los supervisores y las etiquetas QR."
+        vistas={vistas}
+        activa="inventario"
+        acciones={<Link className="btn" href="/admin/exportar?tabla=activos">Descargar CSV</Link>}
+      />
 
       {f.ok && <div className="note ok" style={{ marginBottom: 14 }}>Equipo dado de alta como {f.ok}. Imprime ese código en su etiqueta.</div>}
       {f.error && <div className="note bad" style={{ marginBottom: 14 }}>No se pudo guardar: {f.error}</div>}
@@ -74,8 +74,8 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
         <div className="kpi"><span className="eyebrow">Pagado en garantía</span><span className="v" style={{ color: pagado ? "var(--bad)" : undefined }}>{mxn(pagado)}</span><span className="s">Correctivos con garantía vigente: reclamar</span></div>
       </div>
 
-      <section className="card" style={{ marginBottom: 18 }}>
-        <h3>Dar de alta equipo</h3>
+      <details className="card alta-det">
+        <summary><h3>Dar de alta equipo</h3><span className="btn primary small">+ Nuevo equipo</span></summary>
         <p className="sub">Si dejas el código vacío se genera solo (ej. PK-CAF-004). Al guardar se abre su ficha con la etiqueta QR lista para imprimir.</p>
         <form action={crearActivo} className="inline-form">
           <label className="field">Código (opcional)<input id="a-id" name="id" placeholder="PK-CAF-004" /></label>
@@ -104,7 +104,7 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
           <label className="field w2">Garantía (PDF o foto, opcional)<input id="a-gdoc" name="garantia" type="file" accept="application/pdf,image/*" /></label>
           <button className="btn primary" type="submit">Dar de alta</button>
         </form>
-      </section>
+      </details>
 
       <form className="toolbar" method="get">
         <label className="field">Zona<select id="f-zona" name="zona" defaultValue={f.zona ?? ""}><option value="">Todas</option>{zonas.map((z) => <option key={z}>{z}</option>)}</select></label>

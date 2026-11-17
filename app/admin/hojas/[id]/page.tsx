@@ -17,7 +17,7 @@ export default async function HojaAdmin({ params }: { params: Promise<{ id: stri
     <>
       <main className="wrap">
         <div className="detail-head no-print">
-          <Link href="/admin/hojas" className="btn small">← Hojas de servicio</Link>
+          <Link href="/admin/hojas" className="btn small">← Servicio · hojas</Link>
         </div>
         <div className="detail" style={{ gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)" }}>
           <HojaView hoja={hoja} />

@@ -1468,3 +1468,24 @@ a:hover > .pt-go { background: #141210; color: #fff; border-color: #141210; tran
 .caja-manual .inline-form { margin-top: 10px; }
 .caja-prov { display: block; font-size: 13px; }
 .cfdi-res.on { border-color: var(--orange); }
+
+/* Encabezado de módulo con vistas internas (Servicio, Equipos) */
+.secc { margin-bottom: 20px; }
+.secc-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.secc-tit .sub { margin: 4px 0 0; max-width: 640px; }
+.secc-acc { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.secc-nav { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.secc-nav::-webkit-scrollbar { display: none; }
+.secc-nav a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px 11px; font-weight: 700; font-size: 15px; color: var(--muted); text-decoration: none; border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap; transition: color .15s, border-color .15s; }
+.secc-nav a:hover { color: var(--ink); }
+.secc-nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--orange); }
+.secc-n { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: var(--surface-2); color: var(--ink); font-size: 12px; font-weight: 800; display: inline-grid; place-items: center; font-variant-numeric: tabular-nums; }
+.secc-n.alerta { background: var(--bad); color: #fff; }
+.alta-det { margin-bottom: 18px; }
+.alta-det > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.alta-det > summary::-webkit-details-marker { display: none; }
+.alta-det > summary h3 { margin: 0; }
+.alta-det > summary .btn { pointer-events: none; }
+.alta-det[open] > summary .btn { display: none; }
+.alta-det[open] > summary { margin-bottom: 8px; }
+.hoja-tk { display: inline-block; margin-top: 2px; }

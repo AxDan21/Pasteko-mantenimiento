@@ -4,6 +4,8 @@ import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { sitio } from "@/lib/qr";
 import HojaEtiquetas from "@/components/HojaEtiquetas";
+import Seccion from "@/components/Seccion";
+import { vistasEquipos } from "@/lib/secciones";
 
 type F = { ids?: string; zona?: string; sucursal?: string; tam?: string; todas?: string };
 
@@ -13,9 +15,10 @@ export default async function Etiquetas({ searchParams }: { searchParams: Promis
   const f = await searchParams;
   const grande = f.tam === "grande";
   const supabase = await createClient();
-  const [{ data: a }, { data: suc }] = await Promise.all([
+  const [{ data: a }, { data: suc }, vistas] = await Promise.all([
     supabase.from("activos").select("id, equipo, sucursal_id, marca, modelo, descripcion").eq("activo", true).order("sucursal_id").order("id"),
     supabase.from("sucursales").select("id, nombre, zona").order("zona").order("nombre"),
+    vistasEquipos(supabase),
   ]);
   const sucursales = (suc ?? []) as { id: number; nombre: string; zona: string }[];
   const sucPorId = new Map(sucursales.map((s) => [s.id, s]));
@@ -32,14 +35,14 @@ export default async function Etiquetas({ searchParams }: { searchParams: Promis
 
   return (
     <main className="wrap">
-      <div className="head-row no-print">
-        <div>
-          <p className="eyebrow"><Link href="/admin/activos">Activos y garantías</Link></p>
-          <h1 className="page-h">Etiquetas QR</h1>
-          <p className="sub" style={{ margin: 0 }}>Imprime en hoja carta, recorta por la línea punteada y pega cada etiqueta en su equipo. Al escanearla se abre el historial.</p>
-        </div>
-        {lista.length > 0 && <BotonImprimir />}
-      </div>
+      <Seccion
+        eyebrow="Panel de mantenimiento"
+        titulo="Equipos"
+        sub="Imprime en hoja carta, recorta por la línea punteada y pega cada etiqueta en su equipo. Al escanearla se abre su historial y el reporte de fallas."
+        vistas={vistas}
+        activa="etiquetas"
+        acciones={lista.length > 0 ? <BotonImprimir /> : undefined}
+      />
 
       {!sitio() && <div className="note warn no-print" style={{ marginBottom: 14 }}>Configura NEXT_PUBLIC_SITE_URL con tu dirección de Vercel antes de imprimir; si no, los QR no abrirán nada.</div>}
 
@@ -64,7 +67,7 @@ export default async function Etiquetas({ searchParams }: { searchParams: Promis
       {!filtrado ? (
         <div className="card no-print"><h3>Elige qué etiquetas imprimir</h3><p className="sub">Filtra por zona o sucursal, escribe códigos, o genera las de todos los equipos.</p></div>
       ) : lista.length === 0 ? (
-        <div className="card no-print"><h3>Sin equipos con estos filtros</h3><p className="sub">Da de alta los equipos en Activos y garantías.</p></div>
+        <div className="card no-print"><h3>Sin equipos con estos filtros</h3><p className="sub">Da de alta los equipos en Equipos → Inventario.</p></div>
       ) : (
         <>
           <p className="sub no-print">{lista.length} etiqueta{lista.length !== 1 ? "s" : ""} · {Math.ceil(lista.length / (grande ? 10 : 24))} hoja{Math.ceil(lista.length / (grande ? 10 : 24)) !== 1 ? "s" : ""} carta aprox.</p>

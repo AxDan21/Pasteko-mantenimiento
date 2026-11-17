@@ -1,5 +1,7 @@
 import Link from "next/link";
 import ActivarAvisos from "@/components/ActivarAvisos";
+import Seccion from "@/components/Seccion";
+import { vistasServicio } from "@/lib/secciones";
 import { createClient } from "@/lib/supabase/server";
 import { ABIERTOS, ESTADOS, PRIORIDAD, VENDER, duracion, folioTicket, hace, tiempo, type Ticket } from "@/lib/tickets";
 
@@ -16,10 +18,11 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
   const { f = "abiertos" } = await searchParams;
   const supabase = await createClient();
   const desde = new Date(Date.now() - 30 * 864e5).toISOString();
-  const [{ data: abiertosD }, { data: recientes }, { data: tecnicos }] = await Promise.all([
+  const [{ data: abiertosD }, { data: recientes }, { data: tecnicos }, vistas] = await Promise.all([
     supabase.from("tickets").select("*, sucursales(nombre, zona)").in("estado", ABIERTOS),
     supabase.from("tickets").select("*, sucursales(nombre, zona)").gte("creado", desde).order("creado", { ascending: false }),
     supabase.from("perfiles").select("id, nombre"),
+    vistasServicio(supabase),
   ]);
   const abiertos = (abiertosD ?? []) as Fila[];
   const mes = (recientes ?? []) as Fila[];
@@ -49,14 +52,14 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
 
   return (
     <main className="wrap">
-      <div className="tkb-head">
-        <div>
-          <p className="eyebrow">Mesa de ayuda · Mantenimiento</p>
-          <h1>Reportes de tiendas</h1>
-          <p className="sub" style={{ margin: "4px 0 0" }}>Las tiendas reportan escaneando el QR del equipo. Cierra cada reporte con la hoja de servicio.</p>
-        </div>
-        <ActivarAvisos />
-      </div>
+      <Seccion
+        eyebrow="Panel de mantenimiento"
+        titulo="Servicio"
+        sub="Las tiendas reportan desde el QR del equipo; el técnico lo atiende y su hoja de servicio cierra el reporte."
+        vistas={vistas}
+        activa="reportes"
+        acciones={<ActivarAvisos />}
+      />
 
       <div className="tkb-kpis">
         <div className={`tkb-k ${abiertos.length ? "" : "cero"}`}><span>Abiertos</span><b className="num">{abiertos.length}</b><small>{abiertos.filter((t) => t.estado === "abierto").length} sin asignar</small></div>
@@ -99,6 +102,7 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
                         {t.sintoma} · {VENDER[t.puede_vender].titulo}
                         {t.fotos.length > 0 && ` · 📷 ${t.fotos.length}`}
                         {t.tecnico_id && ` · ${nombreTec.get(t.tecnico_id) ?? "Técnico"}`}
+                        {t.hoja_id && " · con hoja de servicio"}
                       </span>
                     </Link>
                   </li>

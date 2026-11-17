@@ -41,7 +41,7 @@ export default async function FichaActivo({ params, searchParams }: { params: Pr
   return (
     <main className="wrap">
       <div className="detail-head">
-        <Link href="/admin/activos" className="btn small">← Activos</Link>
+        <Link href="/admin/activos" className="btn small">← Equipos</Link>
         <div>
           <p className="eyebrow num">{a.id}</p>
           <h1>{a.equipo}</h1>

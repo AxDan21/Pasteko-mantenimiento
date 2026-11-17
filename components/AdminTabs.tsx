@@ -5,12 +5,10 @@ import { useEffect, useRef } from "react";
 
 const TABS = [
   ["/admin", "Resumen"],
-  ["/admin/tickets", "Reportes"],
-  ["/admin/hojas", "Hojas de servicio"],
+  ["/admin/tickets", "Servicio"],
   ["/admin/preventivos", "Preventivos"],
   ["/admin/gastos", "Gastos"],
-  ["/admin/activos", "Activos y garantías"],
-  ["/admin/activos/censo", "Censo"],
+  ["/admin/activos", "Equipos"],
   ["/admin/caja", "Caja chica"],
   ["/admin/tecnicos", "Técnicos y proveedores"],
   ["/admin/refacciones", "Refacciones"],
@@ -26,7 +24,7 @@ export default function AdminTabs() {
   const nav = useRef<HTMLElement>(null);
   const activo = (href: string) => {
     if (href === "/admin") return path === "/admin";
-    if (href === "/admin/activos") return path.startsWith(href) && !path.startsWith("/admin/activos/censo");
+    if (href === "/admin/tickets") return path.startsWith("/admin/tickets") || path.startsWith("/admin/hojas");
     return path.startsWith(href);
   };
 

@@ -336,7 +336,7 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
         </section>
 
         <section className="dcard s8">
-          <header><div><h3>Reparar o reemplazar</h3><p>Lo gastado en cada equipo contra lo que costó</p></div><Link className="dash-more" href="/admin/activos">Activos</Link></header>
+          <header><div><h3>Reparar o reemplazar</h3><p>Lo gastado en cada equipo contra lo que costó</p></div><Link className="dash-more" href="/admin/activos">Equipos</Link></header>
           {caros.length ? (
             <div className="caros">
               {caros.map(({ x, total: t, rec }) => {
