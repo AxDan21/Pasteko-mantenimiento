@@ -332,31 +332,37 @@ i.tl-open, .tl-legend i.tl-open { position: absolute; top: -6px; bottom: -6px; b
 .timeline li p { margin: 6px 0 0; font-size: 15px; }
 .timeline .tl-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 
-/* Hoja de etiquetas (carta) */
-.etiquetas { display: grid; grid-template-columns: repeat(auto-fill, 6.5cm); gap: 0; background: #fff; color: #111; }
-.etq { width: 6.5cm; height: 3.5cm; border: 1px dashed #bbb; display: flex; gap: 0.2cm; align-items: center; padding: 0.2cm; overflow: hidden; background: #fff; color: #111; break-inside: avoid; }
-.etq-qr { width: 2.9cm; height: 2.9cm; flex: none; }
-.etq-txt { display: flex; flex-direction: column; gap: 1px; min-width: 0; line-height: 1.15; }
-.etq-txt b { font-size: 11pt; }
-.etq-txt span { font-size: 8pt; font-weight: 700; }
-.etq-txt small { font-size: 7pt; color: #444; }
-.etq-marca { display: flex; align-items: center; gap: 3px; background: #fd7a0f; color: #111 !important; border-radius: 3px; padding: 1px 4px; font-size: 6.5pt !important; margin-bottom: 2px; width: max-content; }
-.etq-marca img { width: 12px; height: 12px; object-fit: cover; object-position: top; border-radius: 50%; }
-.etq-hint { margin-top: 2px; font-style: italic; }
-.etiquetas.grande { grid-template-columns: repeat(auto-fill, 9cm); }
-.etiquetas.grande .etq { width: 9cm; height: 5cm; gap: 0.3cm; padding: 0.3cm; }
-.etiquetas.grande .etq-qr { width: 4.2cm; height: 4.2cm; }
-.etiquetas.grande .etq-txt b { font-size: 14pt; }
-.etiquetas.grande .etq-txt span { font-size: 10pt; }
-.etiquetas.grande .etq-txt small { font-size: 8.5pt; }
+/* Hoja de etiquetas (carta): 9 × 11.6 cm, QR de 7.5 × 7.5 cm, 4 por hoja */
+.etiquetas { display: grid; grid-template-columns: repeat(auto-fill, 9cm); gap: 0.3cm; background: #fff; color: #111; }
+.etq { width: 9cm; height: 11.6cm; padding: 0.15cm; border: 1px dashed #c8c8c8; background: #fff; break-inside: avoid; page-break-inside: avoid; }
+.etq-in { position: relative; width: 8.7cm; height: 11.3cm; background: #fff; color: #111; font-family: "Inter", system-ui, sans-serif; }
+/* Marco naranja; Teko y su círculo lo rompen por arriba */
+.etq-marco { position: absolute; left: 0; right: 0; top: 2.05cm; bottom: 0.4cm; border: 0.16cm solid #fd7a0f; border-radius: 0.55cm; }
+.etq-sol { position: absolute; left: 0.25cm; top: 0.12cm; width: 2.6cm; height: 2.6cm; border-radius: 50%; background: #ffe4cc; }
+.etq-sol::after { content: ""; position: absolute; inset: -0.22cm; border-radius: 50%; border: 0.05cm dashed #fd7a0f; opacity: .6; }
+.etq-teko { position: absolute; left: 0.32cm; top: 0; height: 4.2cm; width: auto; z-index: 2; clip-path: inset(0 0 1.52cm 0); filter: drop-shadow(0 0.05cm 0.05cm rgba(0,0,0,.18)); }
+.etq-tit { position: absolute; left: 3.15cm; right: 0.2cm; top: 0.5cm; display: flex; flex-direction: column; gap: 0.06cm; z-index: 3; }
+.etq-pre { font-size: 7.5pt; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: #fd7a0f; line-height: 1; }
+.etq-esc { font-family: "Inter Display", "Inter", sans-serif; font-weight: 900; font-size: 21pt; letter-spacing: -.03em; line-height: .95; color: #111; }
+.etq-sub { font-size: 6.5pt; font-weight: 600; color: #6b6259; line-height: 1.1; }
+.etq-qrbox { position: absolute; left: 0.6cm; top: 2.68cm; width: 7.5cm; height: 7.5cm; background: #fff; z-index: 4; }
+.etq-qr { display: block; width: 7.5cm; height: 7.5cm; image-rendering: pixelated; }
+/* Esquinas tipo visor de cámara */
+.etq-esq { position: absolute; width: 0.85cm; height: 0.85cm; border: 0 solid #fd7a0f; }
+.etq-esq.a { left: -0.2cm; top: -0.2cm; border-left-width: 0.14cm; border-top-width: 0.14cm; border-top-left-radius: 0.25cm; }
+.etq-esq.b { right: -0.2cm; top: -0.2cm; border-right-width: 0.14cm; border-top-width: 0.14cm; border-top-right-radius: 0.25cm; }
+.etq-esq.c { left: -0.2cm; bottom: -0.2cm; border-left-width: 0.14cm; border-bottom-width: 0.14cm; border-bottom-left-radius: 0.25cm; }
+.etq-esq.d { right: -0.2cm; bottom: -0.2cm; border-right-width: 0.14cm; border-bottom-width: 0.14cm; border-bottom-right-radius: 0.25cm; }
+/* Código del equipo: placa negra montada sobre el borde inferior del marco */
+.etq-cod { position: absolute; left: 50%; bottom: 0.08cm; transform: translateX(-50%); z-index: 5; background: #111; color: #fd7a0f; border: 0.08cm solid #fff; box-shadow: 0 0 0 0.05cm #111; border-radius: 999px; padding: 0.14cm 0.45cm; font-family: "DejaVu Sans Mono", ui-monospace, monospace; font-size: 15pt; font-weight: 700; letter-spacing: .06em; line-height: 1; white-space: nowrap; }
 @media (max-width: 900px) { .qr-gar { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .qr-card { flex-direction: column; align-items: flex-start; } }
 @media print {
   @page { size: letter; margin: 10mm; }
   .admin-tabs, .no-print { display: none !important; }
-  .etiquetas { grid-template-columns: repeat(3, 6.5cm); }
-  .etiquetas.grande { grid-template-columns: repeat(2, 9cm); }
-  .etq, .etq-marca { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .etiquetas { grid-template-columns: repeat(2, 9cm); justify-content: center; gap: 0.25cm 0.4cm; }
+  .etq, .etq * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .etq:nth-child(4n) { break-after: page; }
 }
 
 /* ---------- Pendientes de pago ---------- */

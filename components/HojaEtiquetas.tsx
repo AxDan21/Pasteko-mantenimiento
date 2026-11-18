@@ -3,20 +3,30 @@ import { qrPng, urlActivo } from "@/lib/qr";
 
 export type ItemEtiqueta = { id: string; equipo: string; sucursal: string; descripcion?: string | null };
 
-/** Hoja de etiquetas QR para imprimir en carta (chica 6.5 × 3.5 cm o grande 9 × 5 cm). */
-export default async function HojaEtiquetas({ items, grande = false }: { items: ItemEtiqueta[]; grande?: boolean }) {
-  const qrs = await Promise.all(items.map((x) => qrPng(urlActivo(x.id), grande ? 420 : 300)));
+/** Imagen de Teko sobre el QR. Si tienes a Teko señalando hacia abajo, guárdalo en /public y cambia esta ruta. */
+const TEKO = "/mascota.webp";
+
+/** Etiquetas de 9 × 11.6 cm con QR de 7.5 × 7.5 cm; Teko rompe el marco por arriba (4 por hoja carta). */
+export default async function HojaEtiquetas({ items }: { items: ItemEtiqueta[]; grande?: boolean }) {
+  const qrs = await Promise.all(items.map((x) => qrPng(urlActivo(x.id), 900, "Q")));
   return (
-    <div className={`etiquetas ${grande ? "grande" : ""}`}>
+    <div className="etiquetas">
       {items.map((x, i) => (
         <div key={x.id} className="etq">
-          <img src={qrs[i]} alt={`QR ${x.id}`} className="etq-qr" />
-          <div className="etq-txt">
-            <span className="etq-marca"><img src="/mascota.webp" alt="" /> Pasteko Mantenimiento</span>
-            <b className="num">{x.id}</b>
-            <span>{x.descripcion || x.equipo}</span>
-            <small>{x.sucursal}</small>
-            <small className="etq-hint">Escanea: guía y reportes</small>
+          <div className="etq-in">
+            <span className="etq-marco" aria-hidden="true" />
+            <span className="etq-sol" aria-hidden="true" />
+            <img src={TEKO} alt="" className="etq-teko" />
+            <div className="etq-tit">
+              <span className="etq-pre">¿El equipo falla?</span>
+              <span className="etq-esc">¡Escanéame!</span>
+              <span className="etq-sub">Con la cámara de tu celular</span>
+            </div>
+            <div className="etq-qrbox">
+              <img src={qrs[i]} alt={`QR ${x.id}`} className="etq-qr" />
+              <i className="etq-esq a" /><i className="etq-esq b" /><i className="etq-esq c" /><i className="etq-esq d" />
+            </div>
+            <b className="etq-cod">{x.id}</b>
           </div>
         </div>
       ))}

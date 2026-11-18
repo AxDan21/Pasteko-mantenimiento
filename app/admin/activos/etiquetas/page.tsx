@@ -13,7 +13,6 @@ type F = { ids?: string; zona?: string; sucursal?: string; tam?: string; todas?:
 export default async function Etiquetas({ searchParams }: { searchParams: Promise<F> }) {
   await requireAdmin();
   const f = await searchParams;
-  const grande = f.tam === "grande";
   const supabase = await createClient();
   const [{ data: a }, { data: suc }, vistas] = await Promise.all([
     supabase.from("activos").select("id, equipo, sucursal_id, marca, modelo, descripcion").eq("activo", true).order("sucursal_id").order("id"),
@@ -57,11 +56,8 @@ export default async function Etiquetas({ searchParams }: { searchParams: Promis
           </select>
         </label>
         <label className="field">Códigos (separados por coma)<input id="e-ids" name="ids" defaultValue={f.ids ?? ""} placeholder="PK-CAF-001, PK-REF-002" /></label>
-        <label className="field">Tamaño
-          <select id="e-tam" name="tam" defaultValue={grande ? "grande" : "chica"}><option value="chica">Chica · 6.5 × 3.5 cm</option><option value="grande">Grande · 9 × 5 cm</option></select>
-        </label>
         <button className="btn primary" type="submit">Generar</button>
-        <Link className="btn" href={`/admin/activos/etiquetas?todas=1&tam=${grande ? "grande" : "chica"}`}>Todos los equipos</Link>
+        <Link className="btn" href={`/admin/activos/etiquetas?todas=1`}>Todos los equipos</Link>
       </form>
 
       {!filtrado ? (
@@ -70,8 +66,8 @@ export default async function Etiquetas({ searchParams }: { searchParams: Promis
         <div className="card no-print"><h3>Sin equipos con estos filtros</h3><p className="sub">Da de alta los equipos en Equipos → Inventario.</p></div>
       ) : (
         <>
-          <p className="sub no-print">{lista.length} etiqueta{lista.length !== 1 ? "s" : ""} · {Math.ceil(lista.length / (grande ? 10 : 24))} hoja{Math.ceil(lista.length / (grande ? 10 : 24)) !== 1 ? "s" : ""} carta aprox.</p>
-          <HojaEtiquetas grande={grande} items={lista.map((x) => ({ id: x.id, equipo: x.equipo, descripcion: x.descripcion, sucursal: sucPorId.get(x.sucursal_id)?.nombre ?? "" }))} />
+          <p className="sub no-print">{lista.length} etiqueta{lista.length !== 1 ? "s" : ""} · {Math.ceil(lista.length / 4)} hoja{Math.ceil(lista.length / 4) !== 1 ? "s" : ""} carta aprox.</p>
+          <HojaEtiquetas items={lista.map((x) => ({ id: x.id, equipo: x.equipo, descripcion: x.descripcion, sucursal: sucPorId.get(x.sucursal_id)?.nombre ?? "" }))} />
         </>
       )}
     </main>

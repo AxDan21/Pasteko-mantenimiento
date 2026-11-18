@@ -11,7 +11,6 @@ export const dynamic = "force-dynamic";
 export default async function EtiquetasCenso({ searchParams }: { searchParams: Promise<{ sucursal?: string; tam?: string }> }) {
   const { perfil } = await requireSupervisor();
   const f = await searchParams;
-  const grande = f.tam === "grande";
   const esAdmin = perfil.rol === "admin";
   const supabase = await createClient();
 
@@ -47,15 +46,12 @@ export default async function EtiquetasCenso({ searchParams }: { searchParams: P
               {sucursales.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
             </select>
           </label>
-          <label className="field">Tamaño
-            <select id="et-tam" name="tam" defaultValue={grande ? "grande" : "chica"}><option value="chica">Chica · 6.5 × 3.5 cm</option><option value="grande">Grande · 9 × 5 cm</option></select>
-          </label>
           <button className="btn primary" type="submit">Ver</button>
         </form>
         {items.length ? (
           <>
             <p className="sub no-print">{items.length} etiqueta{items.length !== 1 ? "s" : ""}. Usa papel adhesivo o lamina las etiquetas.</p>
-            <HojaEtiquetas items={items} grande={grande} />
+            <HojaEtiquetas items={items} />
           </>
         ) : (
           <div className="card"><h3>Sin equipos registrados</h3><p className="sub">Registra los equipos de la sucursal y aquí aparecerán sus etiquetas.</p></div>
