@@ -4,7 +4,7 @@ import Header from "@/components/Header";
 import Icono from "@/components/Icono";
 import CopiarResumen from "@/components/CopiarResumen";
 import { publicClient } from "@/lib/supabase/public";
-import { youtubeId } from "@/lib/format";
+import { urlExternaConfigurada, youtubeId } from "@/lib/format";
 import type { Equipo, Faq, Video } from "@/lib/types";
 
 export const revalidate = 300;
@@ -24,7 +24,7 @@ export default async function FichaEquipo({ params }: { params: Promise<{ slug: 
     db.from("videos").select("*").eq("equipo_id", equipo.id).order("orden"),
     db.from("faqs").select("*").eq("equipo_id", equipo.id).order("orden"),
   ]);
-  const osticket = process.env.NEXT_PUBLIC_OSTICKET_URL;
+  const osticket = urlExternaConfigurada(process.env.NEXT_PUBLIC_OSTICKET_URL);
 
   return (
     <>

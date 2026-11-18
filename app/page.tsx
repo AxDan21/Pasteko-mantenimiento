@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import BuscadorEquipos from "@/components/BuscadorEquipos";
 import { publicClient } from "@/lib/supabase/public";
 import type { Equipo, Faq, Video } from "@/lib/types";
+import { urlExternaConfigurada } from "@/lib/format";
 
 export const revalidate = 300; // el contenido se actualiza al guardar en el panel
 
@@ -21,7 +22,7 @@ export default async function Inicio() {
           equipos={(equipos ?? []) as Equipo[]}
           faqs={(faqs ?? []) as Pick<Faq, "id" | "equipo_id" | "pregunta" | "pasos">[]}
           videos={(videos ?? []) as Pick<Video, "id" | "equipo_id" | "titulo">[]}
-          osticket={process.env.NEXT_PUBLIC_OSTICKET_URL}
+          osticket={urlExternaConfigurada(process.env.NEXT_PUBLIC_OSTICKET_URL)}
         />
         <footer className="pt-foot">
           <span>Pasteko · Mantenimiento</span>
