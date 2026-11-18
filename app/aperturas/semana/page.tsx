@@ -11,7 +11,7 @@ import { actualizarPaso } from "../actions";
 export const metadata = { title: "Mi semana · Aperturas" };
 
 type Pendiente = { v: Vista; r: Fila; color: string };
-const COLORES = ["#fd7a0f", "#2f6fdb", "#0f8a7e", "#7a4fd6", "#c2337a", "#a35a00"];
+const COLORES = ["#ea5731", "#008c93", "#fab428", "#6f1c75", "#d4005a", "#46ad48"];
 const MOTIVOS = ["Proveedor", "Pago pendiente", "Permisos", "Obra atrasada", "Otro"];
 const FILTROS = [
   ["todo", "Todo"],

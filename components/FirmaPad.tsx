@@ -20,7 +20,7 @@ const FirmaPad = forwardRef<FirmaHandle, { onCambio?: (vacia: boolean) => void }
       ctx.lineWidth = 2.4;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      ctx.strokeStyle = "#111";
+      ctx.strokeStyle = "#1d1d1b";
       if (copia) {
         const img = new Image();
         img.onload = () => ctx.drawImage(img, 0, 0, cv.clientWidth, cv.clientHeight);

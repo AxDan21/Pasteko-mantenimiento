@@ -171,7 +171,7 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
 
   const zonaMayor = porZona[0];
   const equipoMayor = equiposFallan[0];
-  const colorPres = pct > 100 ? "#d93a2b" : pct > ritmo + 5 ? "#e8a317" : "#fd7a0f";
+  const colorPres = pct > 100 ? "#d4005a" : pct > ritmo + 5 ? "#fab428" : "#ea5731";
 
   return (
     <main className="wrap dash">
@@ -222,7 +222,7 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
                 <b className="kpi-v">{fallasMes.length}<small> correctivos</small></b>
                 <Delta actual={fallasMes.length} anterior={fallasAnt.length} />
               </div>
-              <Sparkline valores={serieFallas} color="#d93a2b" />
+              <Sparkline valores={serieFallas} color="#d4005a" />
             </div>
             <span className="kpi-s">{fallasMes.length ? `${mxn(costoFallas / fallasMes.length)} por falla en promedio` : "Sin correctivos este mes"}</span>
           </div>
@@ -233,7 +233,7 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
                 <b className="kpi-v">{pctPrev.toFixed(0)}%<small> del gasto</small></b>
                 <span className="kpi-s">{hechos} de {prevMes.length} hechos · {vencidos.length} vencido{vencidos.length !== 1 ? "s" : ""}</span>
               </div>
-              <Sparkline valores={seriePrev} color="#2c9a5a" />
+              <Sparkline valores={seriePrev} color="#46ad48" />
             </div>
           </div>
         </div>
@@ -262,7 +262,7 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
               centro={corto(total)} sub="total del mes"
               datos={[
                 ...porZona.map((x) => ({ nombre: zonaCorta(x.z), valor: x.actual, color: x.color, extra: <Delta actual={x.actual} anterior={x.ant} texto="" /> })),
-                ...(generales > 0 ? [{ nombre: "General", valor: generales, color: "#9a928a" }] : []),
+                ...(generales > 0 ? [{ nombre: "General", valor: generales, color: "#929291" }] : []),
               ]}
             />
           ) : <p className="vacio">Sin gastos este mes.</p>}
@@ -312,7 +312,7 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
           <header><div><h3>Equipos que más fallan</h3><p>Correctivos en hojas de servicio · últimos 90 días</p></div><Link className="dash-more" href="/admin/hojas">Hojas</Link></header>
           {equiposFallan.length ? (
             <Columnas
-              color="#d93a2b"
+              color="#d4005a"
               datos={equiposFallan.map((e) => ({
                 etiqueta: e.equipo, valor: e.n, arriba: `${e.n}`,
                 abajo: `${e.tiendas.size} tienda${e.tiendas.size !== 1 ? "s" : ""} · ${corto(e.costo)}`,
@@ -341,7 +341,7 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
             <div className="caros">
               {caros.map(({ x, total: t, rec }) => {
                 const pv = x.costo > 0 ? (t / x.costo) * 100 : 0;
-                const col = rec.clase === "bad" ? "#d93a2b" : rec.clase === "warn" ? "#e8a317" : "#2c9a5a";
+                const col = rec.clase === "bad" ? "#d4005a" : rec.clase === "warn" ? "#fab428" : "#46ad48";
                 return (
                   <Link key={x.id} href={`/admin/activos/${x.id}`} className="caro">
                     <div className="caro-g">

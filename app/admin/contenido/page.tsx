@@ -29,7 +29,7 @@ export default async function Contenido() {
   const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
   const qrs = new Map(
     await Promise.all(
-      equipos.map(async (eq) => [eq.id, await QRCode.toDataURL(`${base}/equipo/${eq.slug}`, { margin: 1, width: 240, color: { dark: "#111111", light: "#ffffff" } })] as const)
+      equipos.map(async (eq) => [eq.id, await QRCode.toDataURL(`${base}/equipo/${eq.slug}`, { margin: 1, width: 240, color: { dark: "#1d1d1b", light: "#ffffff" } })] as const)
     )
   );
 

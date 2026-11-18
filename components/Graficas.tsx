@@ -4,12 +4,12 @@
 import type { ReactNode } from "react";
 import { mxn } from "@/lib/format";
 
-export const PALETA = ["#fd7a0f", "#2f6fdb", "#0f8a7e", "#7a4fd6", "#c2337a", "#e8a317", "#5b6b7a", "#9a6b4f"];
+export const PALETA = ["#ea5731", "#008c93", "#fab428", "#6f1c75", "#46ad48", "#d4005a", "#1d1d1b", "#8c8c8b"];
 export const corto = (v: number) =>
   Math.abs(v) >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(v >= 100000 ? 0 : 1)}k` : `$${Math.round(v)}`;
 
 /** Línea pequeña de tendencia con área. */
-export function Sparkline({ valores, color = "#fd7a0f", alto = 36 }: { valores: number[]; color?: string; alto?: number }) {
+export function Sparkline({ valores, color = "#ea5731", alto = 36 }: { valores: number[]; color?: string; alto?: number }) {
   const W = 120, H = alto, n = valores.length;
   if (n < 2) return null;
   const max = Math.max(...valores, 1), min = Math.min(...valores, 0);
@@ -26,7 +26,7 @@ export function Sparkline({ valores, color = "#fd7a0f", alto = 36 }: { valores: 
 }
 
 /** Anillo de avance (0–100+). */
-export function Anillo({ pct, color = "#fd7a0f", tam = 76, grosor = 9, children }: { pct: number; color?: string; tam?: number; grosor?: number; children?: ReactNode }) {
+export function Anillo({ pct, color = "#ea5731", tam = 76, grosor = 9, children }: { pct: number; color?: string; tam?: number; grosor?: number; children?: ReactNode }) {
   const r = (tam - grosor) / 2, C = 2 * Math.PI * r, p = Math.max(0, Math.min(pct, 100));
   return (
     <div className="anillo" style={{ width: `${tam}px`, height: `${tam}px` }}>
@@ -133,7 +133,7 @@ export function Treemap({ datos }: { datos: { nombre: string; valor: number; col
 }
 
 /** Columnas verticales con valor arriba y detalle abajo. */
-export function Columnas({ datos, color = "#fd7a0f" }: { datos: { etiqueta: string; valor: number; arriba: string; abajo?: string }[]; color?: string }) {
+export function Columnas({ datos, color = "#ea5731" }: { datos: { etiqueta: string; valor: number; arriba: string; abajo?: string }[]; color?: string }) {
   const max = Math.max(1, ...datos.map((d) => d.valor));
   return (
     <div className="cols" role="img" aria-label={datos.map((d) => `${d.etiqueta}: ${d.arriba}`).join(", ")}>

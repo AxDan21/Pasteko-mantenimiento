@@ -39,7 +39,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
         <div className="lg-chip lg-c2" aria-hidden="true"><i />Técnico en camino</div>
         <div className="lg-card lg-c3" aria-hidden="true">
           <span className="lg-ok">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
           </span>
           <span className="lg-card-t"><b>Hoja de servicio firmada</b><span>Reporte resuelto</span></span>
         </div>

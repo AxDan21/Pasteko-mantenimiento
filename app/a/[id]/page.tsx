@@ -75,7 +75,7 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
               </span>
               <span className="qr-cod num">{eq.id}</span>
               <span className="qr-ok">
-                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
                 Equipo identificado
               </span>
             </section>

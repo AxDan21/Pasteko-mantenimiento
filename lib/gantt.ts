@@ -54,13 +54,13 @@ export const PASO = new Map(PLANTILLA.map((p) => [p.clave, p]));
 // ---------- Fases (agrupan los pasos y les dan color) ----------
 export type FaseClave = "compras" | "obra" | "equipo" | "mkt" | "cap" | "ap" | "extra";
 export const FASES: Record<FaseClave, { nombre: string; color: string }> = {
-  compras: { nombre: "Compras y proveedor", color: "#2f6fdb" },
-  obra: { nombre: "Obra", color: "#fd7a0f" },
-  equipo: { nombre: "Equipo y sistemas", color: "#7a4fd6" },
-  mkt: { nombre: "Marketing", color: "#c2337a" },
-  cap: { nombre: "Capacitación", color: "#0f8a7e" },
-  ap: { nombre: "Apertura", color: "#6b625a" },
-  extra: { nombre: "Pasos extra", color: "#9a928a" },
+  compras: { nombre: "Compras y proveedor", color: "#008c93" },
+  obra: { nombre: "Obra", color: "#ea5731" },
+  equipo: { nombre: "Equipo y sistemas", color: "#6f1c75" },
+  mkt: { nombre: "Marketing", color: "#d4005a" },
+  cap: { nombre: "Capacitación", color: "#46ad48" },
+  ap: { nombre: "Apertura", color: "#636361" },
+  extra: { nombre: "Pasos extra", color: "#929291" },
 };
 export const ORDEN_FASES: FaseClave[] = ["compras", "obra", "equipo", "mkt", "cap", "ap", "extra"];
 const FASE_DE: Record<string, FaseClave> = {

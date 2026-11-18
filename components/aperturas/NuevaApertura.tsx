@@ -58,13 +58,13 @@ export default function NuevaApertura({ hoy }: { hoy: string }) {
         : { c: "ok", t: `La instalación cae al ${dentro}% de la obra (${larga(inst.fin)}). Bien: a mitad de obra.` };
 
   const hitos = [
-    { t: "Pago de equipos", r: "Tesorería", f: plan.pago.fin, c: "#2f6fdb" },
-    { t: "Inicio de obra", r: "Arquitecto", f: o.inicio, c: "#fd7a0f" },
-    { t: "Equipo en corporativo", r: "Compras", f: plan.entrega_corp.fin, c: "#2f6fdb" },
-    { t: "Instalación de equipo", r: "Arquitecto / Mantenimiento", f: inst.fin, c: "#7a4fd6" },
-    { t: "Fin de obra", r: "Arquitecto", f: o.fin, c: "#fd7a0f" },
-    { t: "Apertura suave", r: tipo === "Franquicia" ? "Excelencia Operativa / Franquiciatario" : "Excelencia Operativa", f: ap, c: "#141210" },
-    { t: "Inauguración", r: "MKT", f: plan.inauguracion.fin, c: "#c2337a" },
+    { t: "Pago de equipos", r: "Tesorería", f: plan.pago.fin, c: "#008c93" },
+    { t: "Inicio de obra", r: "Arquitecto", f: o.inicio, c: "#ea5731" },
+    { t: "Equipo en corporativo", r: "Compras", f: plan.entrega_corp.fin, c: "#46ad48" },
+    { t: "Instalación de equipo", r: "Arquitecto / Mantenimiento", f: inst.fin, c: "#6f1c75" },
+    { t: "Fin de obra", r: "Arquitecto", f: o.fin, c: "#ea5731" },
+    { t: "Apertura suave", r: tipo === "Franquicia" ? "Excelencia Operativa / Franquiciatario" : "Excelencia Operativa", f: ap, c: "#1d1d1b" },
+    { t: "Inauguración", r: "MKT", f: plan.inauguracion.fin, c: "#d4005a" },
   ];
 
   return (
