@@ -6,7 +6,7 @@ import { sesion } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { fecha, folio } from "@/lib/format";
 import { estadoGarantia, fCorta, hoy } from "@/lib/panel";
-import { ESTADOS, folioTicket, hace, type EstadoTicket } from "@/lib/tickets";
+import { ESTADOS, folioTicket, fotoEquipo, hace, type EstadoTicket } from "@/lib/tickets";
 import { guiasActivas } from "@/lib/guias";
 
 export const dynamic = "force-dynamic";
@@ -50,19 +50,40 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
   const gar = ficha ? estadoGarantia(ficha.garantia_hasta, hoy()) : null;
   const icono = eq.slug === "refrigeracion" ? "refri" : eq.slug ?? "general";
   const guia = guiasActivas() && !!eq.slug;
+  const foto = fotoEquipo(eq.slug);
 
   return (
     <>
       <Header items={interno ? [{ href: "/servicio", label: "Mis hojas" }, ...(admin ? [{ href: "/admin", label: "Panel" }] : [])] : supervisor ? [{ href: "/censo", label: "Censo" }] : []} salir={interno || !!supervisor} />
       <main className="wrap" style={{ maxWidth: 760 }}>
         {!interno && !supervisor ? (
-          <div className="qa">
-            <section className="qa-eq">
-              <span className="qa-ico"><Icono nombre={icono} size={34} /></span>
-              <p className="qa-ok"><span aria-hidden>✓</span> Equipo identificado</p>
-              <h1>{eq.equipo}</h1>
-              <p className="qa-chips"><span>📍 {eq.sucursal}</span><span className="num">{eq.id}</span></p>
+          <div className="qr">
+            <section className={`qr-estudio${foto ? "" : " sin-foto"}`}>
+              <span className="qr-sombra" aria-hidden="true" />
+              {foto ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={foto} alt={eq.equipo} className="qr-foto" />
+              ) : (
+                <span className="qr-icono"><Icono nombre={icono} size={64} /></span>
+              )}
+              <span className="qr-esq a" aria-hidden="true" /><span className="qr-esq b" aria-hidden="true" />
+              <span className="qr-esq c" aria-hidden="true" /><span className="qr-esq d" aria-hidden="true" />
+              <span className="qr-linea" aria-hidden="true" />
+              <span className="qr-suc">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>
+                {eq.sucursal}
+              </span>
+              <span className="qr-cod num">{eq.id}</span>
+              <span className="qr-ok">
+                <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+                Equipo identificado
+              </span>
             </section>
+
+            <div className="qr-nombre">
+              <h1>{eq.equipo}</h1>
+              <p>Sucursal {eq.sucursal} · ya sabemos qué equipo es</p>
+            </div>
 
             {abierto && (
               <Link href={`/t/${abierto.token}`} className="qa-abierto">
@@ -75,34 +96,34 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
               </Link>
             )}
 
-            <h2 className="qa-q">¿Qué necesitas?</h2>
-            <Link href={`/a/${eq.id}/reportar`} className="qa-op principal">
-              <span className="qa-op-ic" aria-hidden>
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" /></svg>
-              </span>
-              <span className="qa-op-t">
-                <b>{abierto ? "Reportar algo más" : "Reportar una falla"}</b>
-                <small>{abierto ? `Se suma al reporte ${folioTicket(abierto.folio)}` : "Avisa a Mantenimiento · menos de 1 minuto"}</small>
-              </span>
-              <span className="qa-flecha" aria-hidden>→</span>
-            </Link>
+            <div className="qr-accion">
+              <Link href={`/a/${eq.id}/reportar`} className="qr-cta">
+                <span className="qr-punto" aria-hidden="true"><i /><i /></span>
+                <span className="qr-cta-t">{abierto ? "Reportar algo más" : "Reportar una falla"}</span>
+                <span className="qr-flecha" aria-hidden="true">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                </span>
+              </Link>
+              <p className="qr-tiempo">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2M9 2h6" /></svg>
+                {abierto ? `Se suma al reporte ${folioTicket(abierto.folio)}` : "3 preguntas · menos de 1 minuto"}
+              </p>
+            </div>
+
             {guia && (
               <Link href={`/equipo/${eq.slug}`} className="qa-op">
                 <span className="qa-op-ic" aria-hidden>
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" /><path d="M8 7h7M8 11h5" /></svg>
                 </span>
-                <span className="qa-op-t">
-                  <b>Intentar resolverlo</b>
-                  <small>Pasos y videos de las fallas más comunes</small>
-                </span>
+                <span className="qa-op-t"><b>Intentar resolverlo</b><small>Pasos y videos de las fallas más comunes</small></span>
                 <span className="qa-flecha" aria-hidden>→</span>
               </Link>
             )}
 
-            <ol className="qa-como" aria-label="Cómo funciona">
-              <li><b>1</b>Dinos qué falla</li>
-              <li><b>2</b>Mantenimiento recibe el aviso</li>
-              <li><b>3</b>Sigue el avance en tu celular</li>
+            <ol className="qr-pasos" aria-label="Cómo funciona">
+              <li><b>1</b>Dinos qué<br />falla</li>
+              <li><b>2</b>Mantenimiento<br />recibe el aviso</li>
+              <li><b>3</b>Sigue el avance<br />en tu celular</li>
             </ol>
 
             <p className="qa-pie">¿Eres técnico o supervisor? <Link href={`/login?next=/a/${eq.id}`}>Inicia sesión</Link></p>

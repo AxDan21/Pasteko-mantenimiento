@@ -45,7 +45,7 @@ const GRUPOS: { claves: RegExp; sintomas: string[] }[] = [
   { claves: /refri|congel|enfri|vitrina|camara|cámara|hielo|bebida|nevera|conserv/i,
     sintomas: ["No enfría", "Hace hielo o escarcha", "Gotea agua", "Hace ruido raro", "No enciende", "Puerta o empaque dañado"] },
   { claves: /cafe|café|espresso|molino|barista|capuch/i,
-    sintomas: ["No enciende", "No calienta", "Sin presión o vapor", "Fuga de agua", "Muele mal", "Marca error"] },
+    sintomas: ["Fuga de agua", "Marca error", "Café insípido", "No enciende", "No sale agua"] },
   { claves: /horno|estufa|parrilla|plancha|freid|tostad|micro|gas/i,
     sintomas: ["No calienta", "No enciende", "Calienta disparejo", "Huele a gas", "Marca error", "Puerta dañada"] },
   { claves: /aire|clima|minisplit|extract|campana|ventil/i,
@@ -59,8 +59,9 @@ const GRUPOS: { claves: RegExp; sintomas: string[] }[] = [
 ];
 
 export function sintomasDe(equipo: string, categoria?: string | null) {
-  const texto = `${equipo} ${categoria ?? ""}`;
-  return GRUPOS.find((g) => g.claves.test(texto))?.sintomas ?? BASE;
+  // Primero por el nombre del equipo (más específico); la categoría solo si el nombre no dice nada.
+  // Ej.: "Cafetera BUNN" con categoría "Bebidas" no debe caer en refrigeración.
+  return (GRUPOS.find((g) => g.claves.test(equipo)) ?? GRUPOS.find((g) => g.claves.test(categoria ?? "")))?.sintomas ?? BASE;
 }
 
 /** Riesgo de seguridad: avisar a la tienda qué hacer mientras llega el técnico. */
@@ -107,3 +108,10 @@ export function enlaceWhatsApp(tel: string | null, texto: string) {
   const n = d.length === 10 ? `52${d}` : d;
   return `https://wa.me/${n}?text=${encodeURIComponent(texto)}`;
 }
+
+/** Fotos de producto por tipo de equipo (archivos en /public/equipos). Sin foto se usa el ícono. */
+const FOTOS: Record<string, string> = { cafetera: "/equipos/cafetera.jpg" };
+export const fotoEquipo = (slug: string | null | undefined) => (slug ? FOTOS[slug] ?? null : null);
+
+/** Síntomas que necesitan un dato extra (p. ej. el código de error que marca la pantalla). */
+export const pideDetalle = (sintoma: string) => /marca error/i.test(sintoma);

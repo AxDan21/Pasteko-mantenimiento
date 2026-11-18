@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Header from "@/components/Header";
 import FormTicket from "@/components/FormTicket";
 import { createClient } from "@/lib/supabase/server";
-import { folioTicket, sintomasDe, type EstadoTicket } from "@/lib/tickets";
+import { folioTicket, fotoEquipo, sintomasDe, type EstadoTicket } from "@/lib/tickets";
 import { guiasActivas } from "@/lib/guias";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ export default async function ReportarFalla({ params }: { params: Promise<{ id: 
     <>
       <Header items={[]} />
       <main className="wrap tk-main">
-        <FormTicket activo={{ id: eq.id, equipo: eq.equipo, sucursal: eq.sucursal }} sintomas={sintomasDe(eq.equipo, categoria)} faqs={faqs} abierto={abierto ? { folio: folioTicket(abierto.folio), token: abierto.token } : null} />
+        <FormTicket activo={{ id: eq.id, equipo: eq.equipo, sucursal: eq.sucursal }} sintomas={sintomasDe(eq.equipo, categoria)} faqs={faqs} abierto={abierto ? { folio: folioTicket(abierto.folio), token: abierto.token } : null} foto={fotoEquipo(eq.slug)} />
       </main>
     </>
   );
