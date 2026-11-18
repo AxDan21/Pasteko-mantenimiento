@@ -899,7 +899,8 @@ a.ax-lane:hover .ax-lane-name b { color: var(--brand); }
 .mapa-tec input { width: 18px; height: 18px; accent-color: var(--orange); }
 .mapa-body { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 14px; align-items: start; }
 .mapa-map { height: min(74vh, 720px); min-height: 420px; border-radius: 16px; border: 1px solid var(--line); overflow: hidden; background: var(--surface-2); z-index: 0; }
-.mapa-side { display: flex; flex-direction: column; gap: 12px; max-height: min(74vh, 720px); overflow: auto; scroll-margin-top: 120px; }
+.mapa-side { display: flex; flex-direction: column; gap: 12px; max-height: min(74vh, 720px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scroll-margin-top: 120px; }
+.mapa-side > * { flex-shrink: 0; } /* sin esto la lista se encoge y se corta en vez de hacer scroll */
 .mdot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .mdot.big { width: 14px; height: 14px; margin-top: 6px; }
 .mdot.rojo, .mpin.rojo { background: #d93a2b; }
