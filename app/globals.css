@@ -1049,6 +1049,11 @@ a.ax-lane:hover .ax-lane-name b { color: var(--brand); }
 .dash-hero .anillo { color: #fff; }
 
 /* Alertas como chips */
+.dash-data-error { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--bad); border-radius: 12px; background: var(--bad-soft); color: var(--bad); }
+.dash-data-error div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dash-data-error b { font-size: 14px; }
+.dash-data-error span { font-size: 13px; }
+.dash-data-error .btn { border-color: var(--bad); color: var(--bad); flex: none; }
 .dash-alertas { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .dash-alertas-t { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-right: 4px; }
 .chip-alerta { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--ink); text-decoration: none; transition: border-color .15s ease, transform .15s ease; }
@@ -1146,6 +1151,8 @@ a.ax-lane:hover .ax-lane-name b { color: var(--brand); }
 }
 @media (max-width: 560px) {
   .dash-hero { padding: 20px 16px; border-radius: 18px; }
+  .dash-data-error { align-items: flex-start; }
+  .dash-data-error .btn { white-space: nowrap; }
   .dash-kpis { grid-template-columns: 1fr; }
   .dcard { padding: 16px; }
   .cols { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-columns: auto; min-height: 0; }
