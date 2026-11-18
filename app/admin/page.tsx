@@ -1,7 +1,7 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
 import GraficaMensual from "@/components/GraficaMensual";
 import GraficaTipo from "@/components/GraficaTipo";
+import SucursalesMes from "@/components/SucursalesMes";
 import { Anillo, Columnas, corto, Dona, Medidor, PALETA, Sparkline, Treemap } from "@/components/Graficas";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -124,7 +124,8 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
   const gastoSuc = new Map(agrupar(delMes, (x) => (x.sucursal_id ? String(x.sucursal_id) : null)).map(([id, v]) => [Number(id), v]));
   const fallasSuc = new Map<number, number>();
   fallasMes.forEach((x) => fallasSuc.set(x.sucursal_id, (fallasSuc.get(x.sucursal_id) ?? 0) + 1));
-  const maxSuc = Math.max(1, ...gastoSuc.values());
+  const gastoSucMes = new Map<string, number>();
+  gastos.forEach((x) => { if (x.sucursal_id) { const kk = `${x.sucursal_id}|${x.fecha.slice(0, 7)}`; gastoSucMes.set(kk, (gastoSucMes.get(kk) ?? 0) + Number(x.monto)); } });
 
   // ---------- Equipos que más fallan (90 días) ----------
   const ventana = correctivos.filter((x) => fechaHoja(x.creada) >= hace90 && fechaHoja(x.creada) <= corte);
@@ -284,28 +285,20 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
 
         <section className="dcard s12">
           <header>
-            <div><h3>Mapa de calor de sucursales</h3><p>Gasto de {nombreMes(mes)} por tienda: entre más intenso, más gasto. El círculo rojo cuenta las fallas.</p></div>
-            <div className="calor-escala" aria-hidden="true"><small>$0</small><i /><small>{corto(maxSuc)}</small></div>
+            <div><h3>Sucursales del mes</h3><p>Dónde se movió el mantenimiento en {nombreMes(mes)}: gasto y fallas (correctivos) por tienda.</p></div>
           </header>
-          <div className="calor">
-            {zonas.map((z) => (
-              <div key={z} className="calor-zona">
-                <span className="calor-z">{zonaCorta(z)} <small>{corto(zonaGasto(delMes, z))}</small></span>
-                <div className="calor-grid">
-                  {sucursales.filter((s) => s.zona === z).map((s) => {
-                    const v = gastoSuc.get(s.id) ?? 0, t = v / maxSuc, f = fallasSuc.get(s.id) ?? 0;
-                    return (
-                      <div key={s.id} className={`calor-t${t > 0.55 ? " fuerte" : ""}`} style={{ "--t": `${v ? Math.round(14 + t * 86) : 0}%` } as CSSProperties} title={`${s.nombre}: ${mxn(v)}${f ? ` · ${f} falla(s)` : ""}`}>
-                        <b>{s.nombre}</b>
-                        <small>{v ? corto(v) : "—"}</small>
-                        {f > 0 && <span className="calor-f">{f}</span>}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
+          <SucursalesMes
+            mes={mes}
+            mesNombre={nombreMes(mes)}
+            meses={meses.map((x) => mesCorto(x))}
+            zonas={zonas.map((z) => ({
+              zona: z,
+              tiendas: sucursales.filter((s) => s.zona === z).map((s) => ({
+                id: s.id, nombre: s.nombre, gasto: gastoSuc.get(s.id) ?? 0, fallas: fallasSuc.get(s.id) ?? 0,
+                hist: meses.map((x) => gastoSucMes.get(`${s.id}|${x}`) ?? 0),
+              })),
+            }))}
+          />
         </section>
 
         <section className="dcard s7">
