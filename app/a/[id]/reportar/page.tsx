@@ -37,7 +37,7 @@ export default async function ReportarFalla({ params }: { params: Promise<{ id: 
     <>
       <Header items={[]} />
       <main className="wrap tk-main">
-        <FormTicket activo={{ id: eq.id, equipo: eq.equipo, sucursal: eq.sucursal }} sintomas={sintomasDe(eq.equipo, categoria)} faqs={faqs} abierto={abierto ? { folio: folioTicket(abierto.folio), token: abierto.token } : null} foto={fotoEquipo(eq.slug)} />
+        <FormTicket activo={{ id: eq.id, equipo: eq.equipo, sucursal: eq.sucursal }} sintomas={sintomasDe(eq.equipo, categoria)} faqs={faqs} abierto={abierto ? { folio: folioTicket(abierto.folio), token: abierto.token } : null} foto={fotoEquipo(eq.slug, eq.equipo)} />
       </main>
     </>
   );

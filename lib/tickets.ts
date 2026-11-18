@@ -109,9 +109,31 @@ export function enlaceWhatsApp(tel: string | null, texto: string) {
   return `https://wa.me/${n}?text=${encodeURIComponent(texto)}`;
 }
 
-/** Fotos de producto por tipo de equipo (archivos en /public/equipos). Sin foto se usa el ícono. */
-const FOTOS: Record<string, string> = { cafetera: "/equipos/cafetera.jpg" };
-export const fotoEquipo = (slug: string | null | undefined) => (slug ? FOTOS[slug] ?? null : null);
+/** Fotos de producto por tipo de equipo (archivos en /public/equipos). Sin foto se usa el ícono.
+ *  Primero por slug del catálogo; si el tipo no está publicado (slug vacío), por el nombre del equipo.
+ *  El orden importa: "cocción acelerada" antes que "horno". */
+const FOTOS: Record<string, string> = {
+  cafetera: "/equipos/cafetera.jpg",
+  horno: "/equipos/horno.jpg",
+  "horno-coccion-acelerada": "/equipos/horno-rapido.jpg",
+  refresquero: "/equipos/refresquero.jpg",
+  frigobar: "/equipos/frigobar.jpg",
+  "maquina-hielos": "/equipos/hielos.jpg",
+  licuadora: "/equipos/licuadora.jpg",
+};
+const FOTOS_NOMBRE: [RegExp, string][] = [
+  [/bunn|crescendo/i, "/equipos/cafetera.jpg"],
+  [/cocci[oó]n acelerada|speed|alta velocidad/i, "/equipos/horno-rapido.jpg"],
+  [/horno/i, "/equipos/horno.jpg"],
+  [/refresquero/i, "/equipos/refresquero.jpg"],
+  [/frigobar/i, "/equipos/frigobar.jpg"],
+  [/hielo/i, "/equipos/hielos.jpg"],
+  [/licuadora/i, "/equipos/licuadora.jpg"],
+];
+export function fotoEquipo(slug: string | null | undefined, nombre?: string | null) {
+  if (slug && FOTOS[slug]) return FOTOS[slug];
+  return FOTOS_NOMBRE.find(([re]) => re.test(nombre ?? ""))?.[1] ?? null;
+}
 
 /** Síntomas que necesitan un dato extra (p. ej. el código de error que marca la pantalla). */
 export const pideDetalle = (sintoma: string) => /marca error/i.test(sintoma);

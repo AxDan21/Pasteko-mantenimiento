@@ -50,7 +50,7 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
   const gar = ficha ? estadoGarantia(ficha.garantia_hasta, hoy()) : null;
   const icono = eq.slug === "refrigeracion" ? "refri" : eq.slug ?? "general";
   const guia = guiasActivas() && !!eq.slug;
-  const foto = fotoEquipo(eq.slug);
+  const foto = fotoEquipo(eq.slug, eq.equipo);
 
   return (
     <>
