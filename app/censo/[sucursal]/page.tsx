@@ -6,6 +6,7 @@ import FormEquipoCenso from "@/components/FormEquipoCenso";
 import { requireSupervisor } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { enlaces } from "@/lib/datos";
+import { fotoEquipo } from "@/lib/tickets";
 import type { Activo } from "@/lib/types";
 import { borrarEquipoCenso, marcarCenso } from "../actions";
 
@@ -28,100 +29,106 @@ export default async function CensoSucursal({ params, searchParams }: { params: 
 
   const [{ data: a }, { data: eqs }] = await Promise.all([
     supabase.from("activos").select("*").eq("sucursal_id", s.id).eq("activo", true).order("registrado", { ascending: false }),
-    supabase.from("equipos").select("nombre").eq("vigente", true).order("orden"),
+    supabase.from("equipos").select("slug, nombre, categoria").eq("vigente", true).order("orden"),
   ]);
   const activos = (a ?? []) as Activo[];
   const urls = await enlaces(supabase, "censo", activos.flatMap((x) => [x.ficha_path, x.foto_path]));
   const pendientes = activos.filter((x) => !x.validado).length;
+  const tipos = ((eqs ?? []) as { slug: string | null; nombre: string; categoria: string | null }[]).map((e) => ({
+    nombre: e.nombre, categoria: e.categoria, foto: fotoEquipo(e.slug, e.nombre),
+  }));
+
+  const lista = (
+    <section className="rc-lista">
+      <div className="rc-lista-cab">
+        <h2>Registrados en esta sucursal</h2>
+        {activos.length > 0 && <Link className="btn small" href={`/censo/etiquetas?sucursal=${s.id}`}>Imprimir etiquetas QR</Link>}
+      </div>
+      {activos.length ? (
+        <ul>
+          {activos.map((x) => {
+            const ficha = x.ficha_path ? urls.get(x.ficha_path) : undefined;
+            const img = (x.foto_path && urls.get(x.foto_path)) || fotoEquipo(null, x.equipo) || ficha;
+            return (
+              <li key={x.id}>
+                {img ? (
+                  <a href={ficha ?? img} target="_blank" rel="noopener noreferrer" aria-label={`Ver la placa de ${x.id}`}><img src={img} alt="" /></a>
+                ) : <span className="rc-sin">Sin foto</span>}
+                <div className="rc-item">
+                  <span className="rc-item-cab"><b className="num">{x.id}</b><span className={`pill ${x.validado ? "ok" : "warn"}`}>{x.validado ? "Validado" : "Por validar"}</span></span>
+                  <p>{x.descripcion || x.equipo}</p>
+                  <small>{x.equipo}{x.serie ? ` · Serie ${x.serie}` : " · Sin serie"}{x.marca ? ` · ${x.marca}` : ""}{x.modelo ? ` ${x.modelo}` : ""}</small>
+                </div>
+                {!x.validado && (esAdmin || x.registrado_por === userId) && (
+                  <form action={borrarEquipoCenso}>
+                    <input type="hidden" name="id" value={x.id} />
+                    <input type="hidden" name="sucursal_id" value={s.id} />
+                    <button className="rc-borrar" type="submit" aria-label={`Borrar ${x.id}`}>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" /></svg>
+                    </button>
+                  </form>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="rc-vacio">Todavía no hay equipos. Empieza con el botón de arriba: refris, hornos, cafeteras, vitrinas, climas…</p>
+      )}
+
+      {!s.censo_completo && activos.length > 0 && (
+        <form action={marcarCenso} className="rc-completa">
+          <input type="hidden" name="sucursal_id" value={s.id} />
+          <input type="hidden" name="completo" value="true" />
+          <button type="submit">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+            Ya registré todo: sucursal completa
+          </button>
+        </form>
+      )}
+    </section>
+  );
 
   return (
     <>
       <Header items={[{ href: "/censo", label: "Censo" }, { href: "/censo/etiquetas", label: "Etiquetas QR" }]} salir sub={perfil.nombre} />
-      <main className="wrap" style={{ maxWidth: 900 }}>
-        <div className="detail-head">
-          <Link href="/censo" className="btn small">← Mis sucursales</Link>
+      <main className="wrap rc-main">
+        <div className="rc-tienda">
+          <Link href="/censo" className="rc-volver" aria-label="Mis sucursales">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 12H5M11 6l-6 6 6 6" /></svg>
+          </Link>
           <div>
-            <p className="eyebrow">{s.zona}</p>
+            <small>{s.zona}</small>
             <h1>{s.nombre}</h1>
-            <p className="sub" style={{ margin: 0 }}>
-              {activos.length} equipo{activos.length !== 1 ? "s" : ""} registrado{activos.length !== 1 ? "s" : ""}
-              {pendientes ? ` · ${pendientes} por validar` : ""}
-            </p>
           </div>
-          <span className={`pill ${s.censo_completo ? "ok" : "warn"}`} style={{ marginLeft: "auto" }}>{s.censo_completo ? "Completa" : "En proceso"}</span>
+          <span className="rc-cuenta">
+            <b>{activos.length}</b> {activos.length === 1 ? "equipo" : "equipos"}
+            {pendientes > 0 && <em>{pendientes} por validar</em>}
+          </span>
         </div>
 
-        {f.ok && MSG[f.ok] && <div className="note ok" style={{ marginBottom: 14 }}>{MSG[f.ok]}</div>}
-        {f.error && <div className="note bad" style={{ marginBottom: 14 }}>{f.error}</div>}
+        {f.ok && MSG[f.ok] && <div className="note ok">{MSG[f.ok]}</div>}
+        {f.error && <div className="note bad">{f.error}</div>}
 
-        <div className="censo-layout">
-          <div>
-            {s.censo_completo ? (
-              <section className="card">
-                <h3>Sucursal completa</h3>
-                <p className="sub">Si encontraste un equipo que faltaba, reábrela para registrarlo.</p>
-                <form action={marcarCenso}>
-                  <input type="hidden" name="sucursal_id" value={s.id} />
-                  <input type="hidden" name="completo" value="false" />
-                  <button className="btn" type="submit">Reabrir para agregar equipos</button>
-                </form>
-              </section>
-            ) : (
-              <FormEquipoCenso sucursalId={s.id} sucursal={s.nombre} equipos={(eqs ?? []).map((e) => e.nombre as string)} esAdmin={esAdmin} />
-            )}
-          </div>
-
-          <div className="stack">
-            <section className="card">
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 8 }}>
-                <h3>Equipos registrados</h3>
-                {activos.length > 0 && <Link className="btn small" href={`/censo/etiquetas?sucursal=${s.id}`}>Imprimir etiquetas QR</Link>}
+        {s.censo_completo ? (
+          <>
+            <section className="rc-cerrada">
+              <span aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
+              <div>
+                <b>Sucursal completa</b>
+                <p>Si encontraste un equipo que faltaba, reábrela para registrarlo.</p>
               </div>
-              {activos.length ? (
-                <ul className="censo-list">
-                  {activos.map((x) => {
-                    const ficha = x.ficha_path ? urls.get(x.ficha_path) : undefined;
-                    return (
-                      <li key={x.id}>
-                        {ficha ? (
-                          <a href={ficha} target="_blank" rel="noopener noreferrer"><img src={ficha} alt={`Ficha técnica de ${x.id}`} /></a>
-                        ) : (
-                          <span className="no-img">Sin foto</span>
-                        )}
-                        <div style={{ minWidth: 0 }}>
-                          <b className="num">{x.id}</b> <span className={`pill ${x.validado ? "ok" : "warn"}`}>{x.validado ? "Validado" : "Por validar"}</span>
-                          <p>{x.descripcion || x.equipo}</p>
-                          <small>{x.equipo}{x.serie ? ` · Serie ${x.serie}` : " · Sin serie"}{x.marca ? ` · ${x.marca}` : ""}{x.modelo ? ` ${x.modelo}` : ""}</small>
-                        </div>
-                        {!x.validado && (esAdmin || x.registrado_por === userId) && (
-                          <form action={borrarEquipoCenso}>
-                            <input type="hidden" name="id" value={x.id} />
-                            <input type="hidden" name="sucursal_id" value={s.id} />
-                            <button className="btn small danger" type="submit" aria-label={`Borrar ${x.id}`}>Borrar</button>
-                          </form>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p className="sub">Todavía no hay equipos. Registra el primero.</p>
-              )}
+              <form action={marcarCenso}>
+                <input type="hidden" name="sucursal_id" value={s.id} />
+                <input type="hidden" name="completo" value="false" />
+                <button className="btn" type="submit">Reabrir</button>
+              </form>
             </section>
-
-            {!s.censo_completo && activos.length > 0 && (
-              <section className="card">
-                <h3>¿Terminaste esta sucursal?</h3>
-                <p className="sub">Confirma que registraste todos los equipos de cocina, refrigeración, bebidas, exhibición y clima.</p>
-                <form action={marcarCenso}>
-                  <input type="hidden" name="sucursal_id" value={s.id} />
-                  <input type="hidden" name="completo" value="true" />
-                  <button className="btn primary" type="submit">Sucursal completa</button>
-                </form>
-              </section>
-            )}
-          </div>
-        </div>
+            {lista}
+          </>
+        ) : (
+          <FormEquipoCenso sucursalId={s.id} sucursal={s.nombre} tipos={tipos} esAdmin={esAdmin}>{lista}</FormEquipoCenso>
+        )}
       </main>
     </>
   );

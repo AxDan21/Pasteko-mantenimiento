@@ -1,5 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
+import Link from "next/link";
 import LoginForm from "@/components/LoginForm";
+
+/** QR decorativo (no se escanea). */
+const QR = "M0 0h7v7H0zM1 1v5h5V1zM2 2h3v3H2zM22 0h7v7h-7zm1 1v5h5V1zm1 1h3v3h-3zM0 22h7v7H0zm1 1v5h5v-5zm1 1h3v3H2zM9 0h2v2H9zm3 1h3v2h-3zm4 0h2v4h-2zM9 4h3v2H9zm5 1h2v3h-2zm-5 4h2v2H9zm4 0h4v2h-4zm6 0h2v4h-2zm3 0h2v2h-2zm3 0h3v2h-3zM0 9h3v2H0zm4 1h3v2H4zm7 2h3v3h-3zm5 0h2v2h-2zm-14 2h2v3H2zm4 0h3v2H6zm16 0h2v3h-2zm3 1h4v2h-4zM9 16h2v2H9zm4 0h4v2h-4zm6 1h2v3h-2zm-7 3h3v2h-3zm5 2h3v2h-3zm5 0h2v2h-2zm4 0h2v4h-2zM9 22h2v3H9zm4 2h2v5h-2zm4 2h3v3h-3zm5 1h3v2h-3z";
 
 export const metadata = { title: "Iniciar sesión · Pasteko Mantenimiento" };
 
@@ -57,35 +61,26 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
           <div className="lg-tit">
             <p className="lg-eyebrow">ACCESO AL PANEL</p>
             <h1>Hola de nuevo</h1>
-            <p>Entra con el correo y la contraseña que te dio Mantenimiento.</p>
+            <p>Técnicos, supervisores y Mantenimiento: entra con el correo y la contraseña que te dio Mantenimiento.</p>
           </div>
 
           <LoginForm next={next} error={error ? ERRORES[error] ?? "No se pudo iniciar sesión." : null} />
 
-          <div className="lg-para">
-            <div className="lg-sep"><span />ESTE ACCESO ES PARA<span /></div>
-            <ul>
-              <li>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" /></svg>
-                Técnicos
-              </li>
-              <li>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 3v2h6V3M9 11h6M9 15h4" /></svg>
-                Supervisores
-              </li>
-              <li>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z" /></svg>
-                Mantenimiento
-              </li>
-            </ul>
-          </div>
-
-          <div className="lg-tienda">
-            <span>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><path d="M14 14h3v3M21 14v.01M14 21h3M21 18v3" /></svg>
+          <Link className="lg-qr" href="/escanear">
+            <span className="lg-qr-visor" aria-hidden="true">
+              <svg width="40" height="40" viewBox="0 0 29 29" shapeRendering="crispEdges"><path fill="#1d1d1b" d={QR} /></svg>
+              <i className="e1" /><i className="e2" /><i className="e3" /><i className="e4" />
+              <b className="lg-qr-linea" />
             </span>
-            <p><b>¿Eres tienda?</b>No necesitas cuenta: escanea el QR del equipo para reportar una falla.</p>
-          </div>
+            <span className="lg-qr-t">
+              <small>¿ERES TIENDA?</small>
+              <b>Reporta una falla sin cuenta</b>
+              <span>Escanea el QR de la etiqueta pegada en el equipo.</span>
+            </span>
+            <span className="lg-qr-ir" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </span>
+          </Link>
         </div>
       </section>
     </main>
