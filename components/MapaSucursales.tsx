@@ -185,7 +185,7 @@ export default function MapaSucursales({ sucursales, tecnicos }: { sucursales: P
 
               <div className="mapa-links">
                 <a href={enlaceMaps(actual)} target="_blank" rel="noopener noreferrer">Ver en Google Maps</a>
-                <Link href={`/admin/supervisores?zona=${encodeURIComponent(actual.zona)}`}>Pendientes de la zona</Link>
+                <Link href={`/admin/sucursales/zonas?zona=${encodeURIComponent(actual.zona)}`}>Pendientes de la zona</Link>
               </div>
             </div>
           ) : (

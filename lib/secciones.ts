@@ -26,3 +26,23 @@ export async function vistasEquipos(db: Db): Promise<Vista[]> {
     { clave: "etiquetas", href: "/admin/activos/etiquetas", nombre: "Etiquetas QR" },
   ];
 }
+
+/** Sucursales = mapa + tablero por zona y supervisor (antes "Supervisores"). */
+export function vistasSucursales(): Vista[] {
+  return [
+    { clave: "mapa", href: "/admin/sucursales", nombre: "Mapa" },
+    { clave: "zonas", href: "/admin/sucursales/zonas", nombre: "Por zona y supervisor" },
+  ];
+}
+
+/** Usuarios de la app (técnicos, supervisores, administradores, consulta) + proveedores externos. */
+export async function vistasUsuarios(db: Db): Promise<Vista[]> {
+  const [{ count: usuarios }, { count: proveedores }] = await Promise.all([
+    db.from("perfiles").select("id", { count: "exact", head: true }).eq("activo", true),
+    db.from("proveedores").select("id", { count: "exact", head: true }).eq("activo", true),
+  ]);
+  return [
+    { clave: "usuarios", href: "/admin/usuarios", nombre: "Usuarios de la app", cuenta: usuarios ?? 0 },
+    { clave: "proveedores", href: "/admin/usuarios/proveedores", nombre: "Proveedores externos", cuenta: proveedores ?? 0 },
+  ];
+}

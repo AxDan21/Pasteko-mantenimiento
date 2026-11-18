@@ -1,7 +1,8 @@
 {
   "name": "Pasteko Mantenimiento",
   "short_name": "Mantenimiento",
-  "start_url": "/",
+  "start_url": "/inicio",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f6f4f2",
   "theme_color": "#111111",

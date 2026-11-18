@@ -1,5 +1,7 @@
 import MapaSucursales, { type PinSucursal, type PinTecnico } from "@/components/MapaSucursales";
 import { requireAdmin } from "@/lib/auth";
+import Seccion from "@/components/Seccion";
+import { vistasSucursales } from "@/lib/secciones";
 import { createClient } from "@/lib/supabase/server";
 import { kmCarretera } from "@/lib/geo";
 import { fCorta, hoy, mesActual, rangoFechas, sumarDias } from "@/lib/panel";
@@ -54,15 +56,13 @@ export default async function Sucursales() {
 
   return (
     <main className="wrap mapa-page">
-      <div className="head-row">
-        <div>
-          <p className="eyebrow">Mapa</p>
-          <h1 className="page-h">Sucursales</h1>
-          <p className="sub" style={{ margin: 0 }}>
-            {pins.length} de {todas.length} sucursales en el mapa · {tecnicos.length} técnico{tecnicos.length !== 1 ? "s" : ""} con base
-          </p>
-        </div>
-      </div>
+      <Seccion
+        eyebrow="Panel de mantenimiento"
+        titulo="Sucursales"
+        sub={`${pins.length} de ${todas.length} sucursales en el mapa · ${tecnicos.length} técnico${tecnicos.length !== 1 ? "s" : ""} con base`}
+        vistas={vistasSucursales()}
+        activa="mapa"
+      />
 
       {sinUbicacion.length > 0 && (
         <div className="note warn" style={{ marginBottom: 14 }}>

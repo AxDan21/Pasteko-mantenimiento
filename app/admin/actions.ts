@@ -98,15 +98,15 @@ export async function crearTecnico(f: FormData) {
   const email = txt(f, "email"), nombre = txt(f, "nombre"), password = txt(f, "password");
   const rolPedido = txt(f, "rol");
   const rol = ["admin", "supervisor", "consulta"].includes(rolPedido) ? rolPedido : "tecnico";
-  if (!email || !nombre || password.length < 8) redirect("/admin/tecnicos?error=datos");
-  if (rol === "supervisor" && !txt(f, "zona")) redirect("/admin/tecnicos?error=zona");
+  if (!email || !nombre || password.length < 8) redirect("/admin/usuarios?error=datos");
+  if (rol === "supervisor" && !txt(f, "zona")) redirect("/admin/usuarios?error=zona");
 
   const admin = adminClient();
   const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { nombre } });
-  if (error || !data.user) redirect(`/admin/tecnicos?error=${encodeURIComponent(error?.message ?? "alta")}`);
+  if (error || !data.user) redirect(`/admin/usuarios?error=${encodeURIComponent(error?.message ?? "alta")}`);
   await admin.from("perfiles").update({ nombre, rol, zona: txt(f, "zona") || null }).eq("id", data.user.id);
-  revalidatePath("/admin/tecnicos");
-  redirect("/admin/tecnicos?ok=1");
+  revalidatePath("/admin/usuarios");
+  redirect("/admin/usuarios?ok=1");
 }
 
 export async function actualizarTecnico(f: FormData) {
@@ -118,13 +118,13 @@ export async function actualizarTecnico(f: FormData) {
   if (f.has("zona")) cambios.zona = txt(f, "zona") || null;
   if (id === userId && cambios.activo === false) return; // no desactivarse a sí mismo
   await supabase.from("perfiles").update(cambios).eq("id", id);
-  revalidatePath("/admin/tecnicos");
+  revalidatePath("/admin/usuarios");
 }
 
 export async function cambiarPassword(f: FormData) {
   await requireAdmin();
   const password = txt(f, "password");
-  if (password.length < 8) redirect("/admin/tecnicos?error=password");
+  if (password.length < 8) redirect("/admin/usuarios?error=password");
   const { error } = await adminClient().auth.admin.updateUserById(txt(f, "id"), { password });
-  redirect(error ? `/admin/tecnicos?error=${encodeURIComponent(error.message)}` : "/admin/tecnicos?ok=password");
+  redirect(error ? `/admin/usuarios?error=${encodeURIComponent(error.message)}` : "/admin/usuarios?ok=password");
 }

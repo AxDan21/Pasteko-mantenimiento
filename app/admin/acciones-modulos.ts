@@ -395,7 +395,7 @@ export async function crearProveedor(f: FormData) {
     correo: opcTxt(f, "correo"),
     calificacion: opcNum(f, "calificacion"),
   });
-  revalidatePath("/admin/tecnicos");
+  revalidatePath("/admin/usuarios/proveedores");
 }
 
 export async function actualizarProveedor(f: FormData) {
@@ -404,7 +404,7 @@ export async function actualizarProveedor(f: FormData) {
   if (f.has("activo")) cambios.activo = txt(f, "activo") === "true";
   if (f.has("calificacion")) cambios.calificacion = opcNum(f, "calificacion");
   await supabase.from("proveedores").update(cambios).eq("id", num(f, "id"));
-  revalidatePath("/admin/tecnicos");
+  revalidatePath("/admin/usuarios/proveedores");
 }
 
 // ---------- Refacciones ----------
