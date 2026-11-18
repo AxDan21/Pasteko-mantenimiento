@@ -51,50 +51,79 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
 
   return (
     <>
-      <Header items={interno ? [{ href: "/servicio", label: "Mis hojas" }, ...(admin ? [{ href: "/admin", label: "Panel" }] : [])] : supervisor ? [{ href: "/censo", label: "Censo" }] : [{ href: `/login?next=/a/${eq.id}`, label: "Acceso técnicos" }]} salir={interno || !!supervisor} />
+      <Header items={interno ? [{ href: "/servicio", label: "Mis hojas" }, ...(admin ? [{ href: "/admin", label: "Panel" }] : [])] : supervisor ? [{ href: "/censo", label: "Censo" }] : []} salir={interno || !!supervisor} />
       <main className="wrap" style={{ maxWidth: 760 }}>
-        <div className="detail-head">
-          <span className="eq-ico"><Icono nombre={icono} size={28} /></span>
-          <div>
-            <p className="eyebrow num">{eq.id} · {eq.sucursal}</p>
-            <h1>{eq.equipo}</h1>
-            {ficha && <p className="sub" style={{ margin: 0 }}>{[ficha.marca, ficha.modelo, ficha.serie && `Serie ${ficha.serie}`].filter(Boolean).join(" · ") || "Sin datos de marca"}</p>}
-          </div>
-        </div>
+        {!interno && !supervisor ? (
+          <div className="qa">
+            <section className="qa-eq">
+              <span className="qa-ico"><Icono nombre={icono} size={34} /></span>
+              <p className="qa-ok"><span aria-hidden>✓</span> Equipo identificado</p>
+              <h1>{eq.equipo}</h1>
+              <p className="qa-chips"><span>📍 {eq.sucursal}</span><span className="num">{eq.id}</span></p>
+            </section>
 
-        {supervisor && (
-          <div className="note ok" style={{ marginBottom: 14 }}>Este equipo ya está registrado en el censo. <Link href="/censo">Ir al censo</Link></div>
+            {abierto && (
+              <Link href={`/t/${abierto.token}`} className="qa-abierto">
+                <span className={`pill ${ESTADOS[abierto.estado].clase}`}>{ESTADOS[abierto.estado].nombre}</span>
+                <span className="qa-abierto-t">
+                  <b>Ya hay un reporte en atención</b>
+                  <small>{folioTicket(abierto.folio)} · abierto hace {hace(abierto.creado)}</small>
+                </span>
+                <span className="qa-ver">Ver avance →</span>
+              </Link>
+            )}
+
+            <h2 className="qa-q">¿Qué necesitas?</h2>
+            <Link href={`/a/${eq.id}/reportar`} className="qa-op principal">
+              <span className="qa-op-ic" aria-hidden>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z" /></svg>
+              </span>
+              <span className="qa-op-t">
+                <b>{abierto ? "Reportar algo más" : "Reportar una falla"}</b>
+                <small>{abierto ? `Se suma al reporte ${folioTicket(abierto.folio)}` : "Avisa a Mantenimiento · menos de 1 minuto"}</small>
+              </span>
+              <span className="qa-flecha" aria-hidden>→</span>
+            </Link>
+            {eq.slug && (
+              <Link href={`/equipo/${eq.slug}`} className="qa-op">
+                <span className="qa-op-ic" aria-hidden>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" /><path d="M8 7h7M8 11h5" /></svg>
+                </span>
+                <span className="qa-op-t">
+                  <b>Intentar resolverlo</b>
+                  <small>Pasos y videos de las fallas más comunes</small>
+                </span>
+                <span className="qa-flecha" aria-hidden>→</span>
+              </Link>
+            )}
+
+            <ol className="qa-como" aria-label="Cómo funciona">
+              <li><b>1</b>Dinos qué falla</li>
+              <li><b>2</b>Mantenimiento recibe el aviso</li>
+              <li><b>3</b>Sigue el avance en tu celular</li>
+            </ol>
+
+            <p className="qa-pie">¿Eres técnico o supervisor? <Link href={`/login?next=/a/${eq.id}`}>Inicia sesión</Link></p>
+          </div>
+        ) : (
+          <div className="detail-head">
+            <span className="eq-ico"><Icono nombre={icono} size={28} /></span>
+            <div>
+              <p className="eyebrow num">{eq.id} · {eq.sucursal}</p>
+              <h1>{eq.equipo}</h1>
+              {ficha && <p className="sub" style={{ margin: 0 }}>{[ficha.marca, ficha.modelo, ficha.serie && `Serie ${ficha.serie}`].filter(Boolean).join(" · ") || "Sin datos de marca"}</p>}
+            </div>
+          </div>
         )}
 
-        {!interno && (
+        {supervisor && (
           <div className="stack">
-            {!supervisor && abierto && (
-              <Link href={`/t/${abierto.token}`} className="tk-ya card">
-                <span className={`pill ${ESTADOS[abierto.estado].clase}`}>{ESTADOS[abierto.estado].nombre}</span>
-                <span>
-                  <b>Reporte {folioTicket(abierto.folio)} en atención</b>
-                  <small>Abierto hace {hace(abierto.creado)}. Toca para ver el avance.</small>
-                </span>
-              </Link>
-            )}
-            {!supervisor && (
-              <Link href={`/a/${eq.id}/reportar`} className="card scan-cta tk-cta">
-                <b>¿Tiene una falla? Repórtala aquí</b>
-                <span>Ya sabemos qué equipo es y de qué tienda. Toma menos de un minuto →</span>
-              </Link>
-            )}
+            <div className="note ok">Este equipo ya está registrado en el censo. <Link href="/censo">Ir al censo</Link></div>
             {eq.slug && (
               <Link href={`/equipo/${eq.slug}`} className="card scan-cta">
                 <b>Guía rápida del equipo</b>
                 <span>Videos y pasos para resolver lo más común →</span>
               </Link>
-            )}
-            {!supervisor && (
-            <div className="card">
-                <h3>¿Eres técnico de mantenimiento?</h3>
-                <p className="sub">Inicia sesión para ver el historial de reparaciones de este equipo y crear su hoja de servicio.</p>
-                <Link className="btn primary" href={`/login?next=/a/${eq.id}`}>Iniciar sesión</Link>
-              </div>
             )}
           </div>
         )}

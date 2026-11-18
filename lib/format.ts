@@ -13,15 +13,3 @@ export function youtubeId(url: string): string | null {
   const m = url.match(/(?:youtu\.be\/|v=|shorts\/|embed\/)([A-Za-z0-9_-]{11})/);
   return m ? m[1] : null;
 }
-
-export function urlExternaConfigurada(url: string | undefined): string | undefined {
-  if (!url) return undefined;
-  try {
-    const parsed = new URL(url);
-    if (!["http:", "https:"].includes(parsed.protocol)) return undefined;
-    if (/\btu-(?:os)?ticket\b/i.test(parsed.hostname)) return undefined;
-    return parsed.toString();
-  } catch {
-    return undefined;
-  }
-}

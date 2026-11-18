@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import Header from "@/components/Header";
-import Icono from "@/components/Icono";
 import FormTicket from "@/components/FormTicket";
 import { createClient } from "@/lib/supabase/server";
-import { ESTADOS, folioTicket, hace, sintomasDe, type EstadoTicket } from "@/lib/tickets";
+import { folioTicket, sintomasDe, type EstadoTicket } from "@/lib/tickets";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Reportar falla · Pasteko Mantenimiento" };
@@ -33,31 +31,12 @@ export default async function ReportarFalla({ params }: { params: Promise<{ id: 
       faqs = f ?? [];
     }
   }
-  const icono = eq.slug === "refrigeracion" ? "refri" : eq.slug ?? "general";
 
   return (
     <>
       <Header items={[]} />
       <main className="wrap tk-main">
-        <div className="tk-equipo">
-          <span className="eq-ico"><Icono nombre={icono} size={26} /></span>
-          <div>
-            <p className="eyebrow">Reportar falla · {eq.sucursal}</p>
-            <h1>{eq.equipo}</h1>
-          </div>
-        </div>
-
-        {abierto && (
-          <Link href={`/t/${abierto.token}`} className="tk-ya card">
-            <span className={`pill ${ESTADOS[abierto.estado].clase}`}>{ESTADOS[abierto.estado].nombre}</span>
-            <span>
-              <b>Este equipo ya tiene un reporte abierto</b>
-              <small>{folioTicket(abierto.folio)} · hace {hace(abierto.creado)}. Toca para ver el avance. Si envías otro, se suma a ese mismo.</small>
-            </span>
-          </Link>
-        )}
-
-        <FormTicket activo={{ id: eq.id, equipo: eq.equipo, sucursal: eq.sucursal }} sintomas={sintomasDe(eq.equipo, categoria)} faqs={faqs} />
+        <FormTicket activo={{ id: eq.id, equipo: eq.equipo, sucursal: eq.sucursal }} sintomas={sintomasDe(eq.equipo, categoria)} faqs={faqs} abierto={abierto ? { folio: folioTicket(abierto.folio), token: abierto.token } : null} />
       </main>
     </>
   );

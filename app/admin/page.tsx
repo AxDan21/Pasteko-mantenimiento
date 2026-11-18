@@ -5,7 +5,7 @@ import GraficaTipo from "@/components/GraficaTipo";
 import { Anillo, Columnas, corto, Dona, Medidor, PALETA, Sparkline, Treemap } from "@/components/Graficas";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { acumuladoPorActivo } from "@/lib/datos";
+import { acumuladoPorActivo, leerAjustes } from "@/lib/datos";
 import { mxn } from "@/lib/format";
 import {
   diasEntre, estadoGarantia, estadoPreventivo, hoy, MESES, mesActual, mesCorto, mesValido, nombreMes,
@@ -54,8 +54,8 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
   const hace90 = sumarDias(corte, -90);
   const desdeHojas = hace90 < `${desde}-01` ? hace90 : `${desde}-01`;
 
-  const [ajustesResult, gResult, pResult, aResult, rResult, cResult, hojasPorRevisarResult, ppResult, hsResult, sucResult, acum] = await Promise.all([
-    supabase.from("ajustes").select("clave, valor"),
+  const [ajustes, { data: g }, { data: p }, { data: a }, { data: r }, { data: c }, { count: porRevisar }, { data: pp }, { data: hs }, { data: suc }, acum] = await Promise.all([
+    leerAjustes(supabase),
     supabase.from("v_gastos").select("fecha, sucursal_id, sucursal, zona, categoria, tipo, monto, origen, beneficiario").gte("fecha", `${desde}-01`).lt("fecha", fin),
     supabase.from("preventivos").select("id, fecha, sucursal_id, equipo, tarea, hecho, sucursales(nombre)").lte("fecha", sumarDias(h, 60)).order("fecha"),
     supabase.from("activos").select("*").eq("activo", true),
@@ -67,34 +67,6 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
     supabase.from("sucursales").select("id, nombre, zona").eq("activa", true).order("nombre"),
     acumuladoPorActivo(supabase),
   ]);
-
-  const g = gResult.data;
-  const p = pResult.data;
-  const a = aResult.data;
-  const r = rResult.data;
-  const c = cResult.data;
-  const porRevisar = hojasPorRevisarResult.count;
-  const pp = ppResult.data;
-  const hs = hsResult.data;
-  const suc = sucResult.data;
-  const ajustesData = ajustesResult.data as { clave: string; valor: number }[] | null;
-  const ajustesMap = new Map<string, number>((ajustesData ?? []).map((x) => [x.clave, Number(x.valor)]));
-  const ajustes = {
-    presupuesto_mensual: ajustesMap.get("presupuesto_mensual") ?? 70000,
-    fondo_caja_chica: ajustesMap.get("fondo_caja_chica") ?? 10000,
-  };
-  const fuenteFallida = [
-    ajustesResult.error,
-    gResult.error,
-    pResult.error,
-    aResult.error,
-    rResult.error,
-    cResult.error,
-    hojasPorRevisarResult.error,
-    ppResult.error,
-    hsResult.error,
-    sucResult.error,
-  ].some(Boolean);
 
   const gastos = (g ?? []) as G[];
   const prevs = (p ?? []) as unknown as (Pick<Preventivo, "id" | "fecha" | "sucursal_id" | "equipo" | "tarea" | "hecho"> & { sucursales: { nombre: string } | null })[];
@@ -180,9 +152,7 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
   const sinFactura = (c ?? []).filter((x) => !x.factura_path).length;
   const cajaUsada = (c ?? []).reduce((s, x) => s + Number(x.monto), 0);
   const cajaSaldo = ajustes.fondo_caja_chica - cajaUsada;
-  const tkResult = await supabase.from("tickets").select("prioridad, estado").in("estado", ["abierto", "asignado", "en_proceso"]);
-  const tkA = tkResult.data;
-  const datosNoDisponibles = fuenteFallida || !!tkResult.error;
+  const { data: tkA } = await supabase.from("tickets").select("prioridad, estado").in("estado", ["abierto", "asignado", "en_proceso"]);
   const tkUrg = (tkA ?? []).filter((x) => x.prioridad === "alta").length;
   const alertas = [
     [tkUrg, "bad", "reportes urgentes de tiendas", "/admin/tickets"],
@@ -269,16 +239,6 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
         </div>
       </section>
 
-      {datosNoDisponibles && (
-        <div className="dash-data-error" role="alert">
-          <div>
-            <b>No se pudieron cargar todos los datos</b>
-            <span>Se muestran solo resultados confirmados. Los valores vacíos no deben interpretarse como cero.</span>
-          </div>
-          <a className="btn small" href={`/admin${esActual ? "" : `?mes=${mes}`}`}>Reintentar</a>
-        </div>
-      )}
-
       {/* ---------- Alertas ---------- */}
       {alertas.length > 0 && (
         <nav className="dash-alertas" aria-label="Requiere tu atención">
@@ -305,12 +265,12 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
                 ...(generales > 0 ? [{ nombre: "General", valor: generales, color: "#9a928a" }] : []),
               ]}
             />
-          ) : datosNoDisponibles ? <p className="vacio">Datos no disponibles.</p> : <p className="vacio">Sin gastos este mes.</p>}
+          ) : <p className="vacio">Sin gastos este mes.</p>}
         </section>
 
         <section className="dcard s7">
           <header><div><h3>¿En qué se va el dinero?</h3><p>Gasto por categoría · cada bloque es proporcional al gasto</p></div><Link className="dash-more" href="/admin/gastos">Gastos</Link></header>
-          {categorias.length ? <Treemap datos={categorias} /> : datosNoDisponibles ? <p className="vacio">Datos no disponibles.</p> : <p className="vacio">Sin gastos este mes.</p>}
+          {categorias.length ? <Treemap datos={categorias} /> : <p className="vacio">Sin gastos este mes.</p>}
         </section>
 
         <section className="dcard s5">
@@ -358,7 +318,7 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
                 abajo: `${e.tiendas.size} tienda${e.tiendas.size !== 1 ? "s" : ""} · ${corto(e.costo)}`,
               }))}
             />
-          ) : datosNoDisponibles ? <p className="vacio">Datos no disponibles.</p> : <p className="vacio">Sin correctivos en los últimos 90 días.</p>}
+          ) : <p className="vacio">Sin correctivos en los últimos 90 días.</p>}
         </section>
 
         <section className="dcard s5">
@@ -372,7 +332,7 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
                 </div>
               ))}
             </div>
-          ) : datosNoDisponibles ? <p className="vacio">Datos no disponibles.</p> : <p className="vacio">Sin pagos a proveedores este mes.</p>}
+          ) : <p className="vacio">Sin pagos a proveedores este mes.</p>}
         </section>
 
         <section className="dcard s8">
@@ -396,7 +356,7 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
                 );
               })}
             </div>
-          ) : datosNoDisponibles ? <p className="vacio">Datos no disponibles.</p> : <p className="vacio">Al ligar hojas de servicio a un equipo (QR), aquí verás cuáles conviene reemplazar.</p>}
+          ) : <p className="vacio">Al ligar hojas de servicio a un equipo (QR), aquí verás cuáles conviene reemplazar.</p>}
         </section>
 
         <section className="dcard s4">
@@ -414,7 +374,7 @@ export default async function Resumen({ searchParams }: { searchParams: Promise<
                 );
               })}
             </div>
-          ) : datosNoDisponibles ? <p className="vacio">Datos no disponibles.</p> : <p className="vacio">Sin preventivos pendientes. <Link href="/admin/preventivos">Programa el primero</Link>.</p>}
+          ) : <p className="vacio">Sin preventivos pendientes. <Link href="/admin/preventivos">Programa el primero</Link>.</p>}
         </section>
       </div>
     </main>
