@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { guiasActivas } from "@/lib/guias";
 import Header from "@/components/Header";
 import Icono from "@/components/Icono";
 import CopiarResumen from "@/components/CopiarResumen";
@@ -16,6 +17,7 @@ export async function generateStaticParams() {
 
 export default async function FichaEquipo({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  if (!guiasActivas()) redirect("/"); // guías apagadas mientras se prepara el contenido
   const db = publicClient();
   const { data: equipo } = await db.from("equipos").select("*").eq("slug", slug).eq("publicado", true).maybeSingle<Equipo>();
   if (!equipo) notFound();

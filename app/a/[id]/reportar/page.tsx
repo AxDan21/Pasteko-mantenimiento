@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import FormTicket from "@/components/FormTicket";
 import { createClient } from "@/lib/supabase/server";
 import { folioTicket, sintomasDe, type EstadoTicket } from "@/lib/tickets";
+import { guiasActivas } from "@/lib/guias";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Reportar falla · Pasteko Mantenimiento" };
@@ -28,7 +29,7 @@ export default async function ReportarFalla({ params }: { params: Promise<{ id: 
     if (e) {
       categoria = e.categoria;
       const { data: f } = await supabase.from("faqs").select("pregunta, pasos, aviso_seguridad").eq("equipo_id", e.id).order("orden");
-      faqs = f ?? [];
+      faqs = guiasActivas() ? f ?? [] : []; // sin guías no se muestra el paso "Prueba rápida"
     }
   }
 

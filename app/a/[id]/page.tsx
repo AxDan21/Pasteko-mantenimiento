@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fecha, folio } from "@/lib/format";
 import { estadoGarantia, fCorta, hoy } from "@/lib/panel";
 import { ESTADOS, folioTicket, hace, type EstadoTicket } from "@/lib/tickets";
+import { guiasActivas } from "@/lib/guias";
 
 export const dynamic = "force-dynamic";
 
@@ -48,6 +49,7 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
   }
   const gar = ficha ? estadoGarantia(ficha.garantia_hasta, hoy()) : null;
   const icono = eq.slug === "refrigeracion" ? "refri" : eq.slug ?? "general";
+  const guia = guiasActivas() && !!eq.slug;
 
   return (
     <>
@@ -84,7 +86,7 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
               </span>
               <span className="qa-flecha" aria-hidden>→</span>
             </Link>
-            {eq.slug && (
+            {guia && (
               <Link href={`/equipo/${eq.slug}`} className="qa-op">
                 <span className="qa-op-ic" aria-hidden>
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" /><path d="M8 7h7M8 11h5" /></svg>
@@ -119,7 +121,7 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
         {supervisor && (
           <div className="stack">
             <div className="note ok">Este equipo ya está registrado en el censo. <Link href="/censo">Ir al censo</Link></div>
-            {eq.slug && (
+            {guia && (
               <Link href={`/equipo/${eq.slug}`} className="card scan-cta">
                 <b>Guía rápida del equipo</b>
                 <span>Videos y pasos para resolver lo más común →</span>
@@ -138,7 +140,7 @@ export default async function EquipoEscaneado({ params }: { params: Promise<{ id
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <Link className="btn primary" href={`/servicio/nueva?activo=${eq.id}${abierto ? `&ticket=${folioTicket(abierto.folio)}` : ""}`}>+ Hoja de servicio{abierto ? ` (cierra ${folioTicket(abierto.folio)})` : " para este equipo"}</Link>
               {admin && <Link className="btn" href={`/admin/activos/${eq.id}`}>Ficha completa con costos</Link>}
-              {eq.slug && <Link className="btn" href={`/equipo/${eq.slug}`}>Guía de la tienda</Link>}
+              {guia && <Link className="btn" href={`/equipo/${eq.slug}`}>Guía de la tienda</Link>}
             </div>
 
             {fichaUrl && (
