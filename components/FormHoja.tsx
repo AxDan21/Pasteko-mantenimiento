@@ -15,13 +15,15 @@ type Props = {
   /** Código del equipo escaneado (QR): preselecciona sucursal y equipo. */
   activoInicial?: string;
   ticketInicial?: string;
+  /** Técnico de nómina: sin mano de obra; las refacciones son opcionales y su costo es de referencia. */
+  propio?: boolean;
 };
 
 type Foto = { id: string; blob: Blob; url: string };
 const MAX_FOTOS = 8;
 const BORRADOR = "pk-hoja-borrador";
 
-export default function FormHoja({ sucursales, equipos, activos = [], preventivos = [], activoInicial, ticketInicial }: Props) {
+export default function FormHoja({ sucursales, equipos, activos = [], preventivos = [], activoInicial, ticketInicial, propio = false }: Props) {
   const router = useRouter();
   const firma = useRef<FirmaHandle>(null);
   const [firmaVacia, setFirmaVacia] = useState(true);
@@ -98,7 +100,7 @@ export default function FormHoja({ sucursales, equipos, activos = [], preventivo
   }
 
   const subtotal = useMemo(() => refs.reduce((s, r) => s + (Number(r.cantidad) || 0) * (Number(r.costo) || 0), 0), [refs]);
-  const total = subtotal + (Number(manoObra) || 0);
+  const total = subtotal + (propio ? 0 : Number(manoObra) || 0);
 
   async function agregarFotos(files: FileList | null) {
     if (!files?.length) return;
@@ -184,7 +186,7 @@ export default function FormHoja({ sucursales, equipos, activos = [], preventivo
         falla: falla.trim(),
         trabajo: trabajo.trim(),
         refacciones: refs.map((r) => ({ descripcion: r.descripcion.trim(), cantidad: Number(r.cantidad), costo: Number(r.costo) })),
-        mano_obra: Number(manoObra) || 0,
+        mano_obra: propio ? 0 : Number(manoObra) || 0,
         total,
         fotos: rutas,
         firma_path: rutaFirma,
@@ -337,8 +339,10 @@ export default function FormHoja({ sucursales, equipos, activos = [], preventivo
       </section>
 
       <section className="card">
-        <h3>4. Refacciones y costo</h3>
-        <p className="sub">Agrega cada refacción usada con su costo unitario.</p>
+        <h3>4. {propio ? "Refacciones (opcional)" : "Refacciones y costo"}</h3>
+        <p className="sub">{propio
+          ? "Si usaste refacciones, anótalas. El costo es opcional y solo de referencia: no se registra como pago."
+          : "Agrega cada refacción usada con su costo unitario."}</p>
         {refs.map((r, i) => (
           <div key={i} className="ref-row">
             <label className="field">
@@ -362,12 +366,14 @@ export default function FormHoja({ sucursales, equipos, activos = [], preventivo
           + Agregar refacción
         </button>
         <div className="totals">
-          <label className="field" style={{ maxWidth: 200 }}>
-            Mano de obra (MXN)
-            <input id="h-mo" type="number" min={0} step="0.01" inputMode="decimal" value={manoObra} onChange={(e) => setManoObra(e.target.value)} placeholder="0" />
-          </label>
+          {!propio && (
+            <label className="field" style={{ maxWidth: 200 }}>
+              Mano de obra (MXN)
+              <input id="h-mo" type="number" min={0} step="0.01" inputMode="decimal" value={manoObra} onChange={(e) => setManoObra(e.target.value)} placeholder="0" />
+            </label>
+          )}
           <div className="tot">
-            <span className="eyebrow">Total</span>
+            <span className="eyebrow">{propio ? "Refacciones (referencia)" : "Total a pagar"}</span>
             <b className="num">{mxn(total)}</b>
           </div>
         </div>

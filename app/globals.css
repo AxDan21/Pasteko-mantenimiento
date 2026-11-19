@@ -2093,3 +2093,5 @@ a:hover > .pt-go { background: #1d1d1b; color: #ffffff; border-color: #1d1d1b; t
 .rc-cerrada > span { width: 40px; height: 40px; border-radius: 50%; background: #46ad48; color: #1d1d1b; display: grid; place-items: center; flex: none; }
 .rc-cerrada > div { flex: 1 1 200px; } .rc-cerrada p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .rc-pant, .rc-listo, .rc-teko, .rc-placa-ok, .cz-suc { animation: none; } }
+.usr-tipo { align-self: flex-start; margin-top: 4px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); font-size: 11px; font-weight: 800; color: var(--muted); }
+.usr-tipo.prov { background: var(--warn-soft); color: var(--warn); }

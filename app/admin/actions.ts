@@ -104,7 +104,8 @@ export async function crearTecnico(f: FormData) {
   const admin = adminClient();
   const { data, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true, user_metadata: { nombre } });
   if (error || !data.user) redirect(`/admin/usuarios?error=${encodeURIComponent(error?.message ?? "alta")}`);
-  await admin.from("perfiles").update({ nombre, rol, zona: txt(f, "zona") || null }).eq("id", data.user.id);
+  const tipo = txt(f, "tipo_tecnico") === "proveedor" ? "proveedor" : "propio";
+  await admin.from("perfiles").update({ nombre, rol, zona: txt(f, "zona") || null, tipo_tecnico: tipo }).eq("id", data.user.id);
   revalidatePath("/admin/usuarios");
   redirect("/admin/usuarios?ok=1");
 }
@@ -116,6 +117,7 @@ export async function actualizarTecnico(f: FormData) {
   const cambios: Record<string, unknown> = {};
   if (f.has("activo")) cambios.activo = txt(f, "activo") === "true";
   if (f.has("zona")) cambios.zona = txt(f, "zona") || null;
+  if (f.has("tipo_tecnico")) cambios.tipo_tecnico = txt(f, "tipo_tecnico") === "proveedor" ? "proveedor" : "propio";
   if (id === userId && cambios.activo === false) return; // no desactivarse a sí mismo
   await supabase.from("perfiles").update(cambios).eq("id", id);
   revalidatePath("/admin/usuarios");

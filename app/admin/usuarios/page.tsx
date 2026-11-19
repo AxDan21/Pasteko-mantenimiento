@@ -35,7 +35,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
   const [{ data: per }, { data: suc }, { data: delMes }, { data: prevs }, { data: act }, vistas] = await Promise.all([
     supabase.from("perfiles").select("*").order("nombre"),
     supabase.from("sucursales").select("id, nombre, zona").eq("activa", true).order("nombre"),
-    supabase.from("hojas_servicio").select("tecnico_id, total, creada").gte("creada", tIni).lt("creada", tFin),
+    supabase.from("hojas_servicio").select("tecnico_id, total, creada, pagado, refacciones").gte("creada", tIni).lt("creada", tFin),
     supabase.from("preventivos").select("tecnico_id, fecha, hecho").not("tecnico_id", "is", null).eq("hecho", false).lte("fecha", h),
     supabase.from("activos").select("sucursal_id, validado").eq("activo", true),
     vistasUsuarios(supabase),
@@ -53,11 +53,13 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
   const zonas = Array.from(new Set(sucursales.map((s) => s.zona))).sort();
   const zonaDe = new Map(sucursales.map((s) => [s.id, s.zona]));
 
-  const tec = new Map<string, { hojas: number; costo: number; ultima: string | null; vencidos: number }>();
-  const t = (id: string) => tec.get(id) ?? tec.set(id, { hojas: 0, costo: 0, ultima: null, vencidos: 0 }).get(id)!;
+  const tec = new Map<string, { hojas: number; costo: number; refs: number; pendiente: number; ultima: string | null; vencidos: number }>();
+  const t = (id: string) => tec.get(id) ?? tec.set(id, { hojas: 0, costo: 0, refs: 0, pendiente: 0, ultima: null, vencidos: 0 }).get(id)!;
   (delMes ?? []).forEach((x) => {
     const r = t(x.tecnico_id as string);
     r.hojas += 1; r.costo += Number(x.total);
+    if (!x.pagado) r.pendiente += Number(x.total);
+    r.refs += ((x.refacciones ?? []) as { cantidad: number; costo: number }[]).reduce((s, y) => s + Number(y.cantidad) * Number(y.costo), 0);
     if (!r.ultima || (x.creada as string) > r.ultima) r.ultima = x.creada as string;
   });
   (prevs ?? []).forEach((x) => { if (estadoPreventivo({ fecha: x.fecha as string, hecho: false }, h).texto === "Vencido") t(x.tecnico_id as string).vencidos += 1; });
@@ -110,6 +112,12 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
           <label className="field">Nombre<input id="u-nombre" name="nombre" required /></label>
           <label className="field">Correo<input id="u-email" name="email" type="email" required /></label>
           <label className="field">Contraseña<input id="u-pass" name="password" type="text" minLength={8} required placeholder="Mínimo 8 caracteres" /></label>
+          <label className="field">Si es técnico
+            <select id="u-tipo" name="tipo_tecnico" defaultValue="propio">
+              <option value="propio">Propio (sueldo)</option>
+              <option value="proveedor">Proveedor (cobra por servicio)</option>
+            </select>
+          </label>
           <label className="field">Zona
             <select id="u-zona" name="zona" defaultValue="">
               <option value="">Sin zona</option>
@@ -135,13 +143,20 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
                     <b>{p.nombre}{p.id === userId && <span className="pill neutral" style={{ marginLeft: 8 }}>Tú</span>}</b>
                     <span className="usr-mail">{correos.get(p.id) ?? "—"}</span>
                     <span className="usr-zona">{p.zona ?? (p.rol === "supervisor" ? "⚠ Sin zona" : "Sin zona")}</span>
+                    {p.rol === "tecnico" && (
+                      <span className={`usr-tipo ${p.tipo_tecnico === "proveedor" ? "prov" : ""}`}>{p.tipo_tecnico === "proveedor" ? "Proveedor · cobra por servicio" : "Propio · sueldo"}</span>
+                    )}
                   </div>
 
                   <div className="usr-dato">
                     {p.rol === "tecnico" && (
                       <>
                         <div><b className="num">{r?.hojas ?? 0}</b><small>hojas en {nombreMes(mes).split(" ")[0].toLowerCase()}</small></div>
-                        <div><b className="num">{mxn(r?.costo ?? 0)}</b><small>costo registrado</small></div>
+                        {p.tipo_tecnico === "proveedor" ? (
+                          <div><b className="num">{mxn(r?.costo ?? 0)}</b><small>a pagarle en el mes{r?.pendiente ? ` · ${mxn(r.pendiente)} pendiente` : ""}</small></div>
+                        ) : (
+                          <div><b className="num">{mxn(r?.refs ?? 0)}</b><small>refacciones (referencia)</small></div>
+                        )}
                         <div><b className={`num ${r?.vencidos ? "rojo" : ""}`}>{r?.vencidos ?? 0}</b><small>preventivos vencidos</small></div>
                         <div><b className="num">{r?.ultima ? fCorta(r.ultima) : "—"}</b><small>última hoja</small></div>
                       </>
@@ -171,6 +186,18 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
                           </label>
                           <button className="btn small" type="submit">Guardar zona</button>
                         </form>
+                        {p.rol === "tecnico" && (
+                          <form action={actualizarTecnico} className="usr-f">
+                            <input type="hidden" name="id" value={p.id} />
+                            <label className="field">Tipo de técnico
+                              <select name="tipo_tecnico" defaultValue={p.tipo_tecnico ?? "propio"} aria-label={`Tipo de técnico de ${p.nombre}`}>
+                                <option value="propio">Propio (sueldo): sus hojas no generan pago</option>
+                                <option value="proveedor">Proveedor: se le paga por servicio</option>
+                              </select>
+                            </label>
+                            <button className="btn small" type="submit">Guardar tipo</button>
+                          </form>
+                        )}
                         <form action={cambiarPassword} className="usr-f">
                           <input type="hidden" name="id" value={p.id} />
                           <label className="field">Nueva contraseña

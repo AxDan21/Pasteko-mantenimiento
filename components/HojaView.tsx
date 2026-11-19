@@ -8,7 +8,11 @@ import BotonImprimir from "@/components/BotonImprimir";
 export default async function HojaView({ hoja }: { hoja: Hoja }) {
   const supabase = await createClient();
   const rutas = [...hoja.fotos, hoja.firma_path];
-  const { data: firmadas } = await supabase.storage.from("hojas").createSignedUrls(rutas, 60 * 60);
+  const [{ data: firmadas }, { data: tec }] = await Promise.all([
+    supabase.storage.from("hojas").createSignedUrls(rutas, 60 * 60),
+    supabase.from("perfiles").select("rol, tipo_tecnico").eq("id", hoja.tecnico_id).maybeSingle<{ rol: string; tipo_tecnico: string | null }>(),
+  ]);
+  const propio = tec?.rol === "tecnico" && tec.tipo_tecnico === "propio";
   const url = (ruta: string) => firmadas?.find((f) => f.path === ruta)?.signedUrl ?? "";
   const subtotal = hoja.refacciones.reduce((s, r) => s + r.cantidad * r.costo, 0);
 
@@ -61,7 +65,9 @@ export default async function HojaView({ hoja }: { hoja: Hoja }) {
           <p className="sub">Sin refacciones.</p>
         )}
         <p style={{ textAlign: "right", margin: "8px 0 0" }} className="num">
-          Refacciones {mxn(subtotal)} · Mano de obra {mxn(Number(hoja.mano_obra))} · <b>Total {mxn(Number(hoja.total))}</b>
+          {propio
+            ? <>Técnico propio · sin pago por servicio · Refacciones {mxn(subtotal)} (referencia)</>
+            : <>Refacciones {mxn(subtotal)} · Mano de obra {mxn(Number(hoja.mano_obra))} · <b>Total {mxn(Number(hoja.total))}</b></>}
         </p>
       </div>
 

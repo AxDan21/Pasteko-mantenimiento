@@ -23,7 +23,9 @@ export type Faq = {
   orden: number;
 };
 
-export type Perfil = { id: string; nombre: string; rol: "tecnico" | "admin" | "supervisor" | "consulta"; zona: string | null; activo: boolean };
+export type Perfil = { id: string; nombre: string; rol: "tecnico" | "admin" | "supervisor" | "consulta"; zona: string | null; activo: boolean;
+  /** propio = de nómina (sus hojas no generan pago); proveedor = externo que cobra por servicio. */
+  tipo_tecnico?: "propio" | "proveedor" };
 
 export type Refaccion = { descripcion: string; cantidad: number; costo: number };
 
