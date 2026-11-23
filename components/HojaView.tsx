@@ -13,7 +13,8 @@ export default async function HojaView({ hoja }: { hoja: Hoja }) {
     supabase.storage.from("hojas").createSignedUrls(rutas, 60 * 60),
     supabase.from("perfiles").select("rol, tipo_tecnico").eq("id", hoja.tecnico_id).maybeSingle<{ rol: string; tipo_tecnico: string | null }>(),
   ]);
-  const propio = tec?.rol === "tecnico" && tec.tipo_tecnico === "propio";
+  // Solo los técnicos externos (proveedor) cobran por hoja; cualquier otro es personal propio.
+  const propio = !(tec?.rol === "tecnico" && tec.tipo_tecnico === "proveedor");
   const url = (ruta: string) => firmadas?.find((f) => f.path === ruta)?.signedUrl ?? "";
   const subtotal = hoja.refacciones.reduce((s, r) => s + r.cantidad * r.costo, 0);
 

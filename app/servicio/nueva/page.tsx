@@ -39,7 +39,7 @@ export default async function NuevaHoja({ searchParams }: { searchParams: Promis
           preventivos={preventivos ?? []}
           activoInicial={activo?.toUpperCase()}
           ticketInicial={ticket && /^MT-\d+$/i.test(ticket) ? ticket.toUpperCase() : undefined}
-          propio={s.perfil.rol !== "admin" && (s.perfil.tipo_tecnico ?? "propio") === "propio"}
+          propio={!(s.perfil.rol === "tecnico" && s.perfil.tipo_tecnico === "proveedor")}
         />
       </main>
     </>
