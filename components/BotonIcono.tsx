@@ -1,5 +1,6 @@
 "use client";
-import type { ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import DialogoConfirmar, { partirMensaje } from "./DialogoConfirmar";
 
 const ICONOS: Record<string, ReactNode> = {
   pagar: <><circle cx="12" cy="12" r="9" /><path d="m8 12.5 2.7 2.7L16 9.8" /></>,
@@ -17,18 +18,30 @@ export function IconoAccion({ nombre }: { nombre: keyof typeof ICONOS | string }
   );
 }
 
-/** Botón de solo icono para formularios; con `confirmar` pide confirmación antes de enviar. */
-export default function BotonIcono({ icono, texto, tono, confirmar, cuenta }: { icono: string; texto: string; tono?: "ok" | "danger"; confirmar?: string; cuenta?: number }) {
+/** Botón de solo icono para formularios; con `confirmar` abre una ventana de confirmación antes de enviar. */
+export default function BotonIcono({ icono, texto, tono, confirmar, cuenta, accion }: { icono: string; texto: string; tono?: "ok" | "danger"; confirmar?: string; cuenta?: number; accion?: string }) {
+  const btn = useRef<HTMLButtonElement>(null);
+  const [abierto, setAbierto] = useState(false);
+  const [titulo, detalle] = confirmar ? partirMensaje(confirmar) : ["", ""];
   return (
-    <button
-      type="submit"
-      className={`ibtn${tono ? ` ${tono}` : ""}`}
-      title={texto}
-      aria-label={texto}
-      onClick={(e) => { if (confirmar && !window.confirm(confirmar)) e.preventDefault(); }}
-    >
-      <IconoAccion nombre={icono} />
-      {cuenta && cuenta > 1 ? <span className="ibtn-n">{cuenta}</span> : null}
-    </button>
+    <>
+      <button
+        ref={btn}
+        type="submit"
+        className={`ibtn${tono ? ` ${tono}` : ""}`}
+        title={texto}
+        aria-label={texto}
+        onClick={(e) => { if (confirmar) { e.preventDefault(); setAbierto(true); } }}
+      >
+        <IconoAccion nombre={icono} />
+        {cuenta && cuenta > 1 ? <span className="ibtn-n">{cuenta}</span> : null}
+      </button>
+      {confirmar && (
+        <DialogoConfirmar abierto={abierto} titulo={titulo} accion={accion} onCancelar={() => setAbierto(false)}
+          onConfirmar={() => { setAbierto(false); btn.current?.form?.requestSubmit(btn.current); }}>
+          {detalle && <p>{detalle}</p>}
+        </DialogoConfirmar>
+      )}
+    </>
   );
 }

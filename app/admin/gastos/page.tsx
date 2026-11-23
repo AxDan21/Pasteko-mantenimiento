@@ -325,7 +325,10 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
                             <input type="hidden" name="id" value={x.ref} />
                             <BotonIcono icono="borrar" tono="danger" cuenta={nFac}
                               texto={nFac > 1 ? `Borrar factura (${nFac} conceptos)` : "Borrar gasto"}
-                              confirmar={nFac > 1 ? `¿Borrar la factura completa (${nFac} conceptos)? No se puede deshacer.` : "¿Borrar este gasto? No se puede deshacer."} />
+                              accion={nFac > 1 ? "Borrar factura" : "Borrar gasto"}
+                              confirmar={nFac > 1
+                                ? `¿Borrar la factura completa? Se borran sus ${nFac} conceptos de ${x.sucursal ?? "General"} por ${mxn(Number(x.factura_total ?? 0) || Number(x.monto))}${x.factura_ref ? ` (${x.factura_ref})` : ""}, junto con su PDF y XML. No se puede deshacer.`
+                                : `¿Borrar este gasto? «${x.concepto}» de ${x.sucursal ?? "General"} por ${mxn(Number(x.monto))}. No se puede deshacer.`} />
                           </form>
                         )}
                       </div>
