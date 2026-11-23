@@ -6,7 +6,8 @@ type Db = Awaited<ReturnType<typeof createClient>>;
 
 /** Pendientes de un módulo. `alerta` pinta el contador en rojo (algo detiene la operación o ya venció). */
 export type Contador = { n: number; alerta?: boolean };
-export type Contadores = Partial<Record<"servicio" | "preventivos" | "equipos" | "refacciones" | "gastos", Contador>>;
+/** `avisos` = reportes de tiendas nuevos que aún no tienen técnico (indicador de la campana). */
+export type Contadores = Partial<Record<"servicio" | "preventivos" | "equipos" | "refacciones" | "gastos" | "avisos", Contador>>;
 
 /**
  * Consultas ligeras (conteos y columnas mínimas) para los contadores de la navegación del panel.
@@ -15,7 +16,7 @@ export type Contadores = Partial<Record<"servicio" | "preventivos" | "equipos" |
 export async function contadoresAdmin(db: Db): Promise<Contadores> {
   const h = hoy();
   const [tk, hojas, prev, censo, ref, pp] = await Promise.all([
-    db.from("tickets").select("prioridad").in("estado", ["abierto", "asignado", "en_proceso"]),
+    db.from("tickets").select("prioridad, estado").in("estado", ["abierto", "asignado", "en_proceso"]),
     db.from("hojas_servicio").select("id", { count: "exact", head: true }).eq("estado", "Enviada"),
     db.from("preventivos").select("id", { count: "exact", head: true }).eq("hecho", false).lt("fecha", h),
     db.from("activos").select("id", { count: "exact", head: true }).eq("activo", true).eq("validado", false),
@@ -27,6 +28,10 @@ export async function contadoresAdmin(db: Db): Promise<Contadores> {
   if (!tk.error && !hojas.error) {
     const abiertos = tk.data ?? [];
     c.servicio = { n: abiertos.length + (hojas.count ?? 0), alerta: abiertos.some((t) => t.prioridad === "alta") };
+  }
+  if (!tk.error) {
+    const nuevos = (tk.data ?? []).filter((t) => t.estado === "abierto");
+    c.avisos = { n: nuevos.length, alerta: nuevos.some((t) => t.prioridad === "alta") };
   }
   if (!prev.error) c.preventivos = { n: prev.count ?? 0, alerta: true };
   if (!censo.error) c.equipos = { n: censo.count ?? 0 };

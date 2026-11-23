@@ -4,12 +4,13 @@
 import type { ReactNode } from "react";
 import { mxn } from "@/lib/format";
 
-export const PALETA = ["#ea5731", "#008c93", "#fab428", "#6f1c75", "#46ad48", "#d4005a", "#1d1d1b", "#8c8c8b"];
+/** Colores de series: tokens de globals.css (--chart-*), cambian con el tema. */
+export const PALETA = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-6)", "var(--ink)", "var(--chart-neutral)"];
 export const corto = (v: number) =>
   Math.abs(v) >= 1_000_000 ? `$${(v / 1_000_000).toFixed(1)}M` : Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(v >= 100000 ? 0 : 1)}k` : `$${Math.round(v)}`;
 
 /** Línea pequeña de tendencia con área. */
-export function Sparkline({ valores, color = "#ea5731", alto = 36 }: { valores: number[]; color?: string; alto?: number }) {
+export function Sparkline({ valores, color = "var(--chart-1)", alto = 36 }: { valores: number[]; color?: string; alto?: number }) {
   const W = 120, H = alto, n = valores.length;
   if (n < 2) return null;
   const max = Math.max(...valores, 1), min = Math.min(...valores, 0);
@@ -26,7 +27,7 @@ export function Sparkline({ valores, color = "#ea5731", alto = 36 }: { valores: 
 }
 
 /** Anillo de avance (0–100+). */
-export function Anillo({ pct, color = "#ea5731", tam = 76, grosor = 9, children }: { pct: number; color?: string; tam?: number; grosor?: number; children?: ReactNode }) {
+export function Anillo({ pct, color = "var(--chart-1)", tam = 76, grosor = 9, children }: { pct: number; color?: string; tam?: number; grosor?: number; children?: ReactNode }) {
   const r = (tam - grosor) / 2, C = 2 * Math.PI * r, p = Math.max(0, Math.min(pct, 100));
   return (
     <div className="anillo" style={{ width: `${tam}px`, height: `${tam}px` }}>
@@ -133,7 +134,7 @@ export function Treemap({ datos }: { datos: { nombre: string; valor: number; col
 }
 
 /** Columnas verticales con valor arriba y detalle abajo. */
-export function Columnas({ datos, color = "#ea5731" }: { datos: { etiqueta: string; valor: number; arriba: string; abajo?: string }[]; color?: string }) {
+export function Columnas({ datos, color = "var(--chart-1)" }: { datos: { etiqueta: string; valor: number; arriba: string; abajo?: string }[]; color?: string }) {
   const max = Math.max(1, ...datos.map((d) => d.valor));
   return (
     <div className="cols" role="img" aria-label={datos.map((d) => `${d.etiqueta}: ${d.arriba}`).join(", ")}>
@@ -159,5 +160,27 @@ export function Medidor({ pct, color }: { pct: number; color: string }) {
       <path d="M10 50 A40 40 0 0 1 90 50" fill="none" stroke="currentColor" strokeOpacity=".12" strokeWidth="10" strokeLinecap="round" />
       <path d="M10 50 A40 40 0 0 1 90 50" fill="none" stroke={color} strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(L * p) / 100} ${L}`} />
     </svg>
+  );
+}
+
+/** Barras horizontales: etiqueta y detalle a la izquierda, barra proporcional y valor a la derecha. */
+export function BarrasH({ datos, color = "var(--chart-1)", descripcion }: {
+  datos: { etiqueta: string; valor: number; texto: string; detalle?: ReactNode; color?: string; href?: string }[];
+  color?: string; descripcion: string;
+}) {
+  const max = Math.max(1, ...datos.map((d) => d.valor));
+  return (
+    <ul className="barh" aria-label={descripcion}>
+      {datos.map((d) => {
+        const fila = (
+          <>
+            <span className="barh-t"><b title={d.etiqueta}>{d.etiqueta}</b>{d.detalle && <small>{d.detalle}</small>}</span>
+            <span className="barh-b" aria-hidden="true"><i style={{ width: `${Math.max(2, (d.valor / max) * 100)}%`, background: d.color ?? color }} /></span>
+            <b className="barh-v num">{d.texto}</b>
+          </>
+        );
+        return <li key={d.etiqueta}>{d.href ? <a href={d.href}>{fila}</a> : <div>{fila}</div>}</li>;
+      })}
+    </ul>
   );
 }

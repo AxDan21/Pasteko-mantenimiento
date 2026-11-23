@@ -98,7 +98,6 @@ export default async function AvanceCenso({ searchParams }: { searchParams: Prom
   return (
     <main className="wrap">
       <Seccion
-        eyebrow="Panel de mantenimiento"
         titulo="Equipos"
         sub="Los supervisores registran los equipos de sus sucursales. Aquí ves cuánto falta y validas lo que registraron."
         vistas={vistas}
@@ -106,8 +105,8 @@ export default async function AvanceCenso({ searchParams }: { searchParams: Prom
         acciones={<Link className="btn" href="/censo">Abrir el censo como supervisor</Link>}
       />
 
-      {f.ok?.startsWith("validados-") && <div className="note ok" style={{ marginBottom: 14 }}>{pl(Number(f.ok.slice(10)) || 0, "equipo validado", "equipos validados")}.</div>}
-      {f.error && <div className="note bad" style={{ marginBottom: 14 }}>{f.error}</div>}
+      {f.ok?.startsWith("validados-") && <div className="note ok eqp-nota" role="status">{pl(Number(f.ok.slice(10)) || 0, "equipo validado", "equipos validados")}.</div>}
+      {f.error && <div className="note bad eqp-nota" role="alert">{f.error}</div>}
 
       {/* ---------- Resumen ---------- */}
       <section className="card cs-res" aria-labelledby="cs-res-t">

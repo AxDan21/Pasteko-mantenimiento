@@ -1,5 +1,10 @@
 import Link from "next/link";
 import ActivarAvisos from "@/components/ActivarAvisos";
+import BuscarEnLista from "@/components/BuscarEnLista";
+import { Anillo, BarrasH } from "@/components/Graficas";
+import IconoUI from "@/components/IconoUI";
+import { Estado, Prioridad } from "@/components/Insignias";
+import Kpi from "@/components/Kpi";
 import PanelTicket from "@/components/PanelTicket";
 import Seccion from "@/components/Seccion";
 import { vistasServicio } from "@/lib/secciones";
@@ -50,24 +55,22 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
   const promedio = cerrados.length ? cerrados.reduce((n, t) => n + tiempo(t).horas, 0) / cerrados.length : null;
   const aTiempo = cerrados.length ? Math.round((cerrados.filter((t) => tiempo(t).horas <= tiempo(t).meta).length / cerrados.length) * 100) : null;
   const vencidos = abiertos.filter((t) => tiempo(t, ahora).vencido).length;
+  const urgentes = abiertos.filter((t) => t.prioridad === "alta").length;
+  const sinTecnico = abiertos.filter((t) => t.estado === "abierto").length;
 
   const conteo = (clave: (t: Fila) => string) => {
     const m = new Map<string, number>();
     mes.forEach((t) => m.set(clave(t), (m.get(clave(t)) ?? 0) + 1));
     return [...m].sort((a, b) => b[1] - a[1]).slice(0, 5);
   };
-  const cuentas: Record<string, number> = {
-    abiertos: abiertos.length,
-    sin_asignar: abiertos.filter((t) => t.estado === "abierto").length,
-    por_revisar: porRevisar.length,
-  };
+  const cuentas: Record<string, number> = { abiertos: abiertos.length, sin_asignar: sinTecnico, por_revisar: porRevisar.length };
   const porSucursal = conteo((t) => t.sucursales?.nombre ?? "—");
   const porEquipo = conteo((t) => t.equipo);
+  const vacio = f === "por_revisar" ? porRevisar.length === 0 : lista.length === 0;
 
   return (
-    <main className="wrap">
+    <main className="wrap srv">
       <Seccion
-        eyebrow="Panel de mantenimiento"
         titulo="Servicio"
         sub="Las tiendas reportan desde el QR del equipo; el técnico lo atiende y su hoja de servicio cierra el reporte."
         vistas={vistas}
@@ -75,37 +78,46 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
         acciones={<ActivarAvisos />}
       />
 
-      <div className="tkb-kpis">
-        <div className={`tkb-k ${abiertos.length ? "" : "cero"}`}><span>Abiertos</span><b className="num">{abiertos.length}</b><small>{abiertos.filter((t) => t.estado === "abierto").length} sin asignar</small></div>
-        <div className={`tkb-k ${abiertos.some((t) => t.prioridad === "alta") ? "alerta" : "cero"}`}><span>Urgentes</span><b className="num">{abiertos.filter((t) => t.prioridad === "alta").length}</b><small>no pueden vender</small></div>
-        <div className={`tkb-k ${vencidos ? "alerta" : "cero"}`}><span>Fuera de tiempo</span><b className="num">{vencidos}</b><small>meta 6 h · 24 h · 72 h</small></div>
-        <div className="tkb-k"><span>Resolución media</span><b className="num">{promedio === null ? "—" : duracion(promedio)}</b><small>{aTiempo === null ? "últimos 30 días" : `${aTiempo}% a tiempo · 30 días`}</small></div>
+      <div className="rz-kpis srv-kpis">
+        <Kpi href="/admin/tickets?f=abiertos" icono="servicio" tono="info" titulo="Abiertos" valor={abiertos.length}
+          detalle={abiertos.length ? `${sinTecnico} sin técnico` : "Nada pendiente"} />
+        <Kpi href="/admin/tickets?f=abiertos" icono="falla" tono="bad" titulo="Urgentes" valor={urgentes} alerta={urgentes > 0}
+          detalle={urgentes ? "la tienda no puede vender" : "Ninguno detiene la venta"} />
+        <Kpi icono="reloj" tono="warn" titulo="Fuera de tiempo" valor={vencidos} alerta={vencidos > 0}
+          detalle="metas: urgente 6 h · media 24 h · baja 72 h" />
+        <Kpi icono="check" tono="ok" titulo="Resolución media" valor={promedio === null ? "—" : duracion(promedio)}
+          detalle={aTiempo === null ? "sin resueltos en 30 días" : `${aTiempo}% a tiempo · 30 días`}
+          grafica={aTiempo !== null && <Anillo pct={aTiempo} color={aTiempo >= 80 ? "var(--ok-fuerte)" : aTiempo >= 60 ? "var(--chart-3)" : "var(--bad)"} tam={56} grosor={7}><b className="num">{aTiempo}%</b></Anillo>} />
       </div>
 
       <div className={`tkb-grid${sel ? " con-panel" : ""}`}>
-        <section>
-          <nav className="tkb-filtros" aria-label="Filtro">
-            {FILTROS.map(([k, n]) => (
-              <Link key={k} href={`/admin/tickets?f=${k}`} aria-current={f === k ? "page" : undefined}>
-                {n}{cuentas[k] ? ` · ${cuentas[k]}` : ""}
-              </Link>
-            ))}
-          </nav>
+        <section aria-label="Reportes">
+          <div className="srv-barra">
+            <nav className="tkb-filtros" aria-label="Filtro">
+              {FILTROS.map(([k, n]) => (
+                <Link key={k} href={`/admin/tickets?f=${k}`} aria-current={f === k ? "page" : undefined}>
+                  {n}{cuentas[k] ? <span className="srv-n">{cuentas[k]}</span> : null}
+                </Link>
+              ))}
+            </nav>
+            {!vacio && <BuscarEnLista key={f} objetivo="srv-lista" placeholder="Folio, sucursal, equipo, síntoma o técnico" etiqueta="Buscar reportes" />}
+          </div>
+
           {f === "por_revisar" ? (
             porRevisar.length === 0 ? (
-              <div className="tkb-vacio card">
+              <div className="ui-vacio">
                 <b>Sin hojas por revisar</b>
-                <span className="sub">Cuando un técnico envíe una hoja de servicio, aparecerá aquí para tu visto bueno.</span>
+                <p>Cuando un técnico envíe una hoja de servicio, aparecerá aquí para tu visto bueno.</p>
               </div>
             ) : (
-              <ul className="tkb-lista">
+              <ul className="tkb-lista" id="srv-lista">
                 {porRevisar.map((x) => (
-                  <li key={x.id}>
+                  <li key={x.id} data-buscar={`${x.folio} ${x.sucursal} ${x.equipo} ${x.tecnico ?? ""} ${x.tipo}`}>
                     <Link href={`/admin/hojas/${x.id}`} className={`tkb-item ${x.tipo === "Correctivo" ? "p-media" : "p-baja"}`}>
                       <div className="tkb-l1">
                         <span className="num tkb-folio">Hoja #{x.folio}</span>
-                        <span className="pill warn">Por revisar</span>
-                        <span className="pill neutral">{x.tipo}</span>
+                        <Estado tono="warn">Por revisar</Estado>
+                        <Estado tono="neutral">{x.tipo}</Estado>
                         <span className="tkb-t">hace {hace(x.creada, ahora)}</span>
                       </div>
                       <b className="tkb-tit">{x.sucursal} · {x.equipo}</b>
@@ -116,31 +128,33 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
               </ul>
             )
           ) : lista.length === 0 ? (
-            <div className="tkb-vacio card">
+            <div className="ui-vacio">
               <b>{f === "abiertos" ? "Sin reportes abiertos" : f === "sin_asignar" ? "Todos los reportes tienen técnico" : "Sin reportes en los últimos 30 días"}</b>
-              <span className="sub">Cuando una tienda escanee el QR de un equipo y reporte una falla, aparecerá aquí y te llegará una notificación.</span>
+              <p>Cuando una tienda escanee el QR de un equipo y reporte una falla, aparecerá aquí y te llegará una notificación.</p>
             </div>
           ) : (
-            <ul className="tkb-lista">
+            <ul className="tkb-lista" id="srv-lista">
               {lista.map((t) => {
                 const tm = tiempo(t, ahora);
+                const abierto = ABIERTOS.includes(t.estado);
+                const tec = t.tecnico_id ? nombreTec.get(t.tecnico_id) ?? "Técnico" : null;
                 return (
-                  <li key={t.id}>
+                  <li key={t.id} data-buscar={`${folioTicket(t.folio)} ${t.sucursales?.nombre ?? ""} ${t.sucursales?.zona ?? ""} ${t.equipo} ${t.sintoma} ${tec ?? ""} ${ESTADOS[t.estado].nombre}`}>
                     <Link href={`/admin/tickets?f=${f}&sel=${t.id}`} scroll={false} className={`tkb-item p-${t.prioridad}`} aria-current={sel === t.id ? "true" : undefined}>
                       <div className="tkb-l1">
                         <span className="num tkb-folio">{folioTicket(t.folio)}</span>
-                        <span className={`pill ${ESTADOS[t.estado].clase}`}>{ESTADOS[t.estado].nombre}</span>
-                        {ABIERTOS.includes(t.estado) && <span className={`pill ${PRIORIDAD[t.prioridad].clase}`}>{PRIORIDAD[t.prioridad].nombre}</span>}
+                        <Estado tono={ESTADOS[t.estado].clase}>{ESTADOS[t.estado].nombre}</Estado>
+                        {abierto && <Prioridad nivel={t.prioridad}>{PRIORIDAD[t.prioridad].nombre}</Prioridad>}
                         <span className={`tkb-t ${tm.vencido ? "bad" : tm.proximo ? "warn" : ""}`}>
-                          {ABIERTOS.includes(t.estado) ? `hace ${hace(t.creado, ahora)}` : `en ${duracion(tm.horas)}`}
+                          {abierto ? <>{tm.vencido && <IconoUI nombre="reloj" tam={13} grosor={2.2} />} hace {hace(t.creado, ahora)}</> : `en ${duracion(tm.horas)}`}
                         </span>
                       </div>
                       <b className="tkb-tit">{t.sucursales?.nombre} · {t.equipo}</b>
                       <span className="tkb-l3">
-                        {t.sintoma} · {VENDER[t.puede_vender].titulo}
-                        {t.fotos.length > 0 && ` · 📷 ${t.fotos.length}`}
-                        {t.tecnico_id && ` · ${nombreTec.get(t.tecnico_id) ?? "Técnico"}`}
-                        {t.hoja_id && " · con hoja de servicio"}
+                        <span>{t.sintoma} · {VENDER[t.puede_vender].titulo}</span>
+                        {t.fotos.length > 0 && <span className="srv-meta"><IconoUI nombre="foto" tam={14} titulo="Fotos" /> {t.fotos.length}</span>}
+                        <span className="srv-meta">{tec ? <><IconoUI nombre="personas" tam={14} /> {tec}</> : <b className="srv-sin">Sin técnico</b>}</span>
+                        {t.hoja_id && <span className="srv-meta"><IconoUI nombre="hojas" tam={14} /> con hoja</span>}
                       </span>
                     </Link>
                   </li>
@@ -151,26 +165,20 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
         </section>
 
         {sel ? <PanelTicket id={sel} cerrar={`/admin/tickets?f=${f}`} /> : (
-        <aside className="tkb-lado">
-          <div className="card">
-            <h3>Tiendas que más reportan</h3>
-            <p className="sub">Últimos 30 días</p>
-            {porSucursal.length ? (
-              <ol className="tkb-top">
-                {porSucursal.map(([n, c]) => <li key={n}><span>{n}</span><b className="num">{c}</b></li>)}
-              </ol>
-            ) : <p className="sub">Sin datos todavía.</p>}
-          </div>
-          <div className="card">
-            <h3>Equipos más reportados</h3>
-            <p className="sub">Últimos 30 días</p>
-            {porEquipo.length ? (
-              <ol className="tkb-top">
-                {porEquipo.map(([n, c]) => <li key={n}><span>{n}</span><b className="num">{c}</b></li>)}
-              </ol>
-            ) : <p className="sub">Sin datos todavía.</p>}
-          </div>
-        </aside>
+          <aside className="tkb-lado">
+            <section className="dcard rz-card" aria-labelledby="srv-tiendas">
+              <header><div><h3 id="srv-tiendas">Tiendas que más reportan</h3><p>Últimos 30 días</p></div></header>
+              {porSucursal.length ? (
+                <BarrasH descripcion="Reportes por tienda en 30 días" datos={porSucursal.map(([n, c], i) => ({ etiqueta: n, valor: c, texto: String(c), color: i === 0 ? "var(--chart-1)" : "var(--brand-soft)" }))} />
+              ) : <p className="sub">Sin reportes todavía.</p>}
+            </section>
+            <section className="dcard rz-card" aria-labelledby="srv-equipos">
+              <header><div><h3 id="srv-equipos">Equipos más reportados</h3><p>Últimos 30 días</p></div></header>
+              {porEquipo.length ? (
+                <BarrasH descripcion="Reportes por equipo en 30 días" datos={porEquipo.map(([n, c], i) => ({ etiqueta: n, valor: c, texto: String(c), color: i === 0 ? "var(--bad)" : "var(--bad-soft)" }))} />
+              ) : <p className="sub">Sin reportes todavía.</p>}
+            </section>
+          </aside>
         )}
       </div>
     </main>

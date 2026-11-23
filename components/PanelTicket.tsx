@@ -1,3 +1,5 @@
+import IconoUI from "@/components/IconoUI";
+import { Estado, Prioridad } from "@/components/Insignias";
 import Link from "next/link";
 import BotonEnviar from "@/components/BotonEnviar";
 import { asignarTecnico, cambiarEstado } from "@/app/admin/tickets/actions";
@@ -17,7 +19,7 @@ export default async function PanelTicket({ id, cerrar }: { id: string; cerrar: 
   if (!data) {
     return (
       <aside className="tkp card" aria-label="Detalle del reporte">
-        <p className="sub" style={{ margin: 0 }}>No se encontró el reporte. Puede que se haya borrado.</p>
+        <p className="sub tkp-nota">No se encontró el reporte. Puede que se haya borrado.</p>
         <Link href={cerrar} className="btn small" scroll={false}>Cerrar</Link>
       </aside>
     );
@@ -47,13 +49,13 @@ export default async function PanelTicket({ id, cerrar }: { id: string; cerrar: 
         <div className="tkp-cab-t">
           <div className="tkb-l1">
             <span className="num tkb-folio">{folio}</span>
-            <span className={`pill ${ESTADOS[t.estado].clase}`}>{ESTADOS[t.estado].nombre}</span>
-            {abierto && <span className={`pill ${PRIORIDAD[t.prioridad].clase}`}>{PRIORIDAD[t.prioridad].nombre}</span>}
+            <Estado tono={ESTADOS[t.estado].clase}>{ESTADOS[t.estado].nombre}</Estado>
+            {abierto && <Prioridad nivel={t.prioridad}>{PRIORIDAD[t.prioridad].nombre}</Prioridad>}
           </div>
           <h2>{t.sucursales?.nombre} · {t.equipo}</h2>
           <p>{t.sintoma}</p>
         </div>
-        <Link href={cerrar} className="tkp-x" scroll={false} aria-label="Cerrar detalle">×</Link>
+        <Link href={cerrar} className="tkp-x" scroll={false} aria-label="Cerrar detalle"><IconoUI nombre="cerrar" tam={20} /></Link>
       </header>
 
       <ol className="tkp-pasos" aria-label="Etapa del reporte">
@@ -76,7 +78,7 @@ export default async function PanelTicket({ id, cerrar }: { id: string; cerrar: 
         <div><dt>Equipo</dt><dd>{t.activo_id ? <Link href={`/admin/activos/${t.activo_id}`} className="num">{t.activo_id}</Link> : "Sin código"}</dd></div>
       </dl>
       {t.detalle && <p className="tkd-detalle">“{t.detalle}”</p>}
-      {enGarantia && <p className="note warn" style={{ margin: 0 }}>Equipo en garantía hasta el {garantiaHasta}: llama al proveedor antes de pagar una reparación.</p>}
+      {enGarantia && <p className="note warn tkp-nota">Equipo en garantía hasta el {garantiaHasta}: llama al proveedor antes de pagar una reparación.</p>}
 
       {abierto && (
         <form action={asignarTecnico} className="tkp-asignar">
@@ -115,7 +117,7 @@ export default async function PanelTicket({ id, cerrar }: { id: string; cerrar: 
         </ol>
       )}
 
-      <Link href={`/admin/tickets/${t.id}`} className="tkp-full">Abrir reporte completo: fotos, notas e historial →</Link>
+      <Link href={`/admin/tickets/${t.id}`} className="tkp-full">Abrir reporte completo: fotos, notas e historial <IconoUI nombre="derecha" tam={14} grosor={2.2} /></Link>
     </aside>
   );
 }

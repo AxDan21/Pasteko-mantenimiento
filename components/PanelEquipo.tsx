@@ -1,4 +1,6 @@
 import Link from "next/link";
+import IconoUI from "@/components/IconoUI";
+import { Estado } from "@/components/Insignias";
 import { createClient } from "@/lib/supabase/server";
 import { mxn } from "@/lib/format";
 import { edadAnios, estadoGarantia, estadoPreventivo, fCorta, hoy, recomendacion } from "@/lib/panel";
@@ -13,7 +15,7 @@ export default async function PanelEquipo({ id, cerrar }: { id: string; cerrar: 
   if (!data) {
     return (
       <aside className="lp card" aria-label="Detalle del equipo">
-        <p className="sub" style={{ margin: 0 }}>No se encontró el equipo {id}.</p>
+        <p className="sub tkp-nota">No se encontró el equipo {id}.</p>
         <Link href={cerrar} className="btn small" scroll={false}>Cerrar</Link>
       </aside>
     );
@@ -41,12 +43,12 @@ export default async function PanelEquipo({ id, cerrar }: { id: string; cerrar: 
         <div className="tkp-cab-t">
           <div className="tkb-l1">
             <span className="num tkb-folio">{x.id}</span>
-            {x.validado === false ? <span className="pill warn">Por validar</span> : <span className={`pill ${x.activo ? rec.clase : "neutral"}`}>{x.activo ? rec.texto : "Dado de baja"}</span>}
+            {x.validado === false ? <Estado tono="warn">Por validar</Estado> : <Estado tono={x.activo ? rec.clase : "neutral"}>{x.activo ? rec.texto : "Dado de baja"}</Estado>}
           </div>
           <h2>{x.descripcion || x.equipo}</h2>
           <p>{x.sucursales?.nombre ?? "Sin sucursal"}{x.sucursales?.zona ? ` · ${x.sucursales.zona}` : ""}</p>
         </div>
-        <Link href={cerrar} className="tkp-x" scroll={false} aria-label="Cerrar detalle">×</Link>
+        <Link href={cerrar} className="tkp-x" scroll={false} aria-label="Cerrar detalle"><IconoUI nombre="cerrar" tam={20} /></Link>
       </header>
 
       <div className="lp-gauge">
@@ -61,11 +63,11 @@ export default async function PanelEquipo({ id, cerrar }: { id: string; cerrar: 
       <dl className="tkd-datos">
         <div><dt>Marca y modelo</dt><dd>{[x.marca, x.modelo].filter(Boolean).join(" ") || "—"}</dd></div>
         <div><dt>Serie</dt><dd className="num">{x.serie || "—"}</dd></div>
-        <div><dt>Garantía</dt><dd><span className={`pill ${gar.clase}`}>{gar.texto}</span></dd></div>
+        <div><dt>Garantía</dt><dd><Estado tono={gar.clase}>{gar.texto}</Estado></dd></div>
         <div><dt>Proveedor</dt><dd>{x.proveedores?.nombre ?? "—"}</dd></div>
       </dl>
-      {pagadoGar > 0 && <p className="note bad" style={{ margin: 0 }}>Se pagaron {mxn(pagadoGar)} en correctivos con la garantía vigente: reclámalos al proveedor.</p>}
-      {enGarantia && pagadoGar === 0 && <p className="note ok" style={{ margin: 0 }}>En garantía: antes de pagar una reparación, llama al proveedor.</p>}
+      {pagadoGar > 0 && <p className="note bad tkp-nota">Se pagaron {mxn(pagadoGar)} en correctivos con la garantía vigente: reclámalos al proveedor.</p>}
+      {enGarantia && pagadoGar === 0 && <p className="note ok tkp-nota">En garantía: antes de pagar una reparación, llama al proveedor.</p>}
 
       <section className="lp-sec">
         <h3>Reportes de tiendas</h3>
@@ -74,7 +76,7 @@ export default async function PanelEquipo({ id, cerrar }: { id: string; cerrar: 
             {(tk ?? []).map((t) => (
               <li key={t.id}>
                 <Link href={`/admin/tickets?f=todos&sel=${t.id}`}><span className="num">{folioTicket(t.folio)}</span> {t.sintoma}</Link>
-                <span className={`pill ${ESTADOS[t.estado as EstadoTicket].clase}`}>{ESTADOS[t.estado as EstadoTicket].nombre}</span>
+                <Estado tono={ESTADOS[t.estado as EstadoTicket].clase}>{ESTADOS[t.estado as EstadoTicket].nombre}</Estado>
               </li>
             ))}
           </ul>
@@ -101,7 +103,7 @@ export default async function PanelEquipo({ id, cerrar }: { id: string; cerrar: 
           <ul className="lp-lista">
             {(pv ?? []).map((p) => {
               const e = estadoPreventivo(p, h);
-              return <li key={p.id}><span><small className="num">{fCorta(p.fecha)}</small> {p.tarea}</span><span className={`pill ${e.clase}`}>{e.texto}</span></li>;
+              return <li key={p.id}><span><small className="num">{fCorta(p.fecha)}</small> {p.tarea}</span><Estado tono={e.clase}>{e.texto}</Estado></li>;
             })}
           </ul>
         </section>
@@ -111,7 +113,7 @@ export default async function PanelEquipo({ id, cerrar }: { id: string; cerrar: 
         <Link className="btn primary small" href={`/servicio/nueva?activo=${encodeURIComponent(x.id)}`}>Hacer hoja de servicio</Link>
         <Link className="btn small" href="/admin/preventivos#nuevo">Programar preventivo</Link>
       </div>
-      <Link href={`/admin/activos/${encodeURIComponent(x.id)}`} className="tkp-full">Abrir ficha completa: etiqueta QR, historial y edición →</Link>
+      <Link href={`/admin/activos/${encodeURIComponent(x.id)}`} className="tkp-full">Abrir ficha completa: etiqueta QR, historial y edición <IconoUI nombre="derecha" tam={14} grosor={2.2} /></Link>
     </aside>
   );
 }

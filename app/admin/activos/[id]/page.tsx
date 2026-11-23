@@ -1,6 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Anillo } from "@/components/Graficas";
+import IconoUI from "@/components/IconoUI";
+import { Estado } from "@/components/Insignias";
+import Kpi from "@/components/Kpi";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { mxn } from "@/lib/format";
@@ -37,30 +41,42 @@ export default async function FichaActivo({ params, searchParams }: { params: Pr
   const docGarantia = a.garantia_path ? docs.get(a.garantia_path) : undefined;
   const esPdf = a.garantia_path?.toLowerCase().endsWith(".pdf");
   const gar = estadoGarantia(a.garantia_hasta, h), rec = recomendacion(a, total, h), edad = edadAnios(a.fecha_compra, h);
+  const pctCosto = a.costo > 0 ? (total / Number(a.costo)) * 100 : 0;
+  const nombreSuc = (suc ?? []).find((s) => s.id === a.sucursal_id)?.nombre as string | undefined;
 
   return (
     <main className="wrap">
-      <div className="detail-head">
-        <Link href="/admin/activos" className="btn small">← Equipos</Link>
+      <Link href="/admin/activos" className="btn small ghost srv-volver"><IconoUI nombre="izquierda" tam={16} grosor={2.2} />Equipos</Link>
+      <header className="eqp-cab">
         <div>
-          <p className="eyebrow num">{a.id}</p>
-          <h1>{a.equipo}</h1>
-          <p className="sub" style={{ margin: 0 }}>{[a.marca, a.modelo, a.serie && `Serie ${a.serie}`].filter(Boolean).join(" · ") || "Sin datos de marca"}</p>
+          <p className="eyebrow num">{a.id}{nombreSuc ? ` · ${nombreSuc}` : ""}</p>
+          <h1 className="page-h">{a.descripcion || a.equipo}</h1>
+          <p className="sub eqp-cab-s">{[a.descripcion ? a.equipo : null, a.marca, a.modelo, a.serie && `Serie ${a.serie}`].filter(Boolean).join(" · ") || "Sin datos de marca"}</p>
         </div>
-      </div>
-      {nuevo && <div className="note ok" style={{ marginBottom: 14 }}>Equipo dado de alta. Imprime su etiqueta QR y pégala en el equipo.</div>}
-      {ok && <div className="note ok" style={{ marginBottom: 14 }}>{ok === "garantia" ? "Documento de garantía guardado." : "Cambios guardados."}</div>}
-      {error && <div className="note bad" style={{ marginBottom: 14 }}>{error}</div>}
+        <div className="eqp-cab-acc">
+          <Estado tono={a.activo ? (a.validado === false ? "warn" : rec.clase) : "neutral"}>{!a.activo ? "Dado de baja" : a.validado === false ? "Por validar" : rec.texto}</Estado>
+          <Link className="btn primary small" href={`/servicio/nueva?activo=${encodeURIComponent(a.id)}`}>Hacer hoja de servicio</Link>
+        </div>
+      </header>
+      {nuevo && <div className="note ok eqp-nota" role="status">Equipo dado de alta. Imprime su etiqueta QR y pégala en el equipo.</div>}
+      {ok && <div className="note ok eqp-nota" role="status">{ok === "garantia" ? "Documento de garantía guardado." : "Cambios guardados."}</div>}
+      {error && <div className="note bad eqp-nota" role="alert">{error}</div>}
 
-      <div className="kpis">
-        <div className="kpi"><span className="eyebrow">Garantía</span><span className="v" style={{ fontSize: 20 }}><span className={`pill ${gar.clase}`}>{gar.texto}</span></span><span className="s">{a.garantia_hasta ? `Hasta el ${fCorta(a.garantia_hasta)}` : "Sin fecha registrada"}</span></div>
-        <div className="kpi"><span className="eyebrow">Reparaciones acumuladas</span><span className="v">{mxn(total)}</span><span className="s">{a.costo > 0 ? `${((total / Number(a.costo)) * 100).toFixed(0)}% de su costo (${mxn(Number(a.costo))})` : "Sin costo registrado"}</span></div>
-        <div className="kpi"><span className="eyebrow">Antigüedad</span><span className="v">{edad === null ? "—" : edad.toFixed(1)}</span><span className="s">de {a.vida_anios} años de vida útil</span></div>
-        <div className="kpi"><span className="eyebrow">Recomendación</span><span className="v" style={{ fontSize: 20 }}><span className={`pill ${rec.clase}`}>{rec.texto}</span></span><span className="s">Por costo de reparación y edad</span></div>
+      <div className="rz-kpis srv-kpis">
+        <Kpi icono="escudo" tono={gar.clase === "ok" ? "ok" : gar.clase === "warn" ? "warn" : "info"} titulo="Garantía" valor={<span className="srv-kpi-txt">{gar.texto}</span>}
+          detalle={a.garantia_hasta ? `hasta el ${fCorta(a.garantia_hasta)}` : "Sin fecha registrada"} />
+        <Kpi icono="dinero" tono="marca" titulo="Reparaciones acumuladas" valor={mxn(total)}
+          detalle={a.costo > 0 ? `${pctCosto.toFixed(0)}% de su costo (${mxn(Number(a.costo))})` : "Sin costo registrado"}
+          grafica={a.costo > 0 && <Anillo pct={pctCosto} color={pctCosto >= 50 ? "var(--bad)" : pctCosto >= 30 ? "var(--chart-3)" : "var(--ok-fuerte)"} tam={56} grosor={7}><b className="num">{pctCosto.toFixed(0)}%</b></Anillo>} />
+        <Kpi icono="reloj" tono="info" titulo="Antigüedad" valor={edad === null ? "—" : <>{edad.toFixed(1)}<small> años</small></>}
+          detalle={`de ${a.vida_anios} años de vida útil`}
+          grafica={edad !== null && <Anillo pct={(edad / a.vida_anios) * 100} color={edad / a.vida_anios >= 0.9 ? "var(--bad)" : edad / a.vida_anios >= 0.7 ? "var(--chart-3)" : "var(--chart-2)"} tam={56} grosor={7} />} />
+        <Kpi icono="check" tono={rec.clase === "bad" ? "bad" : rec.clase === "warn" ? "warn" : "ok"} titulo="Recomendación" valor={<span className="srv-kpi-txt">{rec.texto}</span>}
+          detalle="por costo de reparación y edad" />
       </div>
 
       {a.validado === false && (
-        <form action={validarActivos} className="note warn censo-banner" style={{ marginBottom: 14 }}>
+        <form action={validarActivos} className="note warn censo-banner eqp-nota">
           <span>Registrado por {quien?.nombre ?? "un supervisor"} el {a.registrado ? fCorta(a.registrado) : ""}. Revisa la ficha técnica, completa costo y garantía, y valídalo.</span>
           <input type="hidden" name="id" value={a.id} />
           <input type="hidden" name="volver" value={`/admin/activos/${a.id}`} />
@@ -139,7 +155,7 @@ export default async function FichaActivo({ params, searchParams }: { params: Pr
             {(prev ?? []).length ? (
               <ul className="hist">
                 {(prev ?? []).map((p) => (
-                  <li key={p.id as number}><span className="num">{fCorta(p.fecha as string)}</span><span>{p.tarea as string}</span><span className={`pill ${p.hecho ? "ok" : "neutral"}`}>{p.hecho ? "Hecho" : "Pendiente"}</span></li>
+                  <li key={p.id as number}><span className="num">{fCorta(p.fecha as string)}</span><span>{p.tarea as string}</span><Estado tono={p.hecho ? "ok" : "neutral"}>{p.hecho ? "Hecho" : "Pendiente"}</Estado></li>
                 ))}
               </ul>
             ) : <p className="sub">Sin preventivos ligados. Prográmalos en Preventivos eligiendo este código.</p>}

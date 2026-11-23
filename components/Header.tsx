@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cerrarSesion } from "@/app/login/actions";
+import SelectorTema from "@/components/SelectorTema";
 
 type Item = { href: string; label: string; activo?: boolean };
 
@@ -23,6 +24,7 @@ export default function Header({ items = [], salir = false, sub = "Portal de suc
               {i.label}
             </Link>
           ))}
+          <SelectorTema />
           {salir && (
             <form action={cerrarSesion}>
               <button type="submit">Salir</button>

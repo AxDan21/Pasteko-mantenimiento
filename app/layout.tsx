@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Atkinson_Hyperlegible, Bricolage_Grotesque, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import { SCRIPT_TEMA } from "@/lib/tema";
 
 const display = Bricolage_Grotesque({ subsets: ["latin"], weight: ["600", "700", "800"], variable: "--f-display" });
 const body = Atkinson_Hyperlegible({ subsets: ["latin"], weight: ["400", "700"], variable: "--f-body" });
@@ -23,7 +24,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="es-MX" className={`${display.variable} ${body.variable} ${mono.variable}`}>
+    // suppressHydrationWarning: el script de tema puede poner data-theme en <html> antes de hidratar.
+    <html lang="es-MX" className={`${display.variable} ${body.variable} ${mono.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       <body>{children}</body>
     </html>
   );

@@ -33,9 +33,8 @@ export default async function Etiquetas({ searchParams }: { searchParams: Promis
 
 
   return (
-    <main className="wrap">
+    <main className="wrap eqp">
       <Seccion
-        eyebrow="Panel de mantenimiento"
         titulo="Equipos"
         sub="Imprime en hoja carta, recorta por la línea punteada y pega cada etiqueta en su equipo. Al escanearla se abre su historial y el reporte de fallas."
         vistas={vistas}
@@ -43,27 +42,26 @@ export default async function Etiquetas({ searchParams }: { searchParams: Promis
         acciones={lista.length > 0 ? <BotonImprimir /> : undefined}
       />
 
-      {!sitio() && <div className="note warn no-print" style={{ marginBottom: 14 }}>Configura NEXT_PUBLIC_SITE_URL con tu dirección de Vercel antes de imprimir; si no, los QR no abrirán nada.</div>}
+      {!sitio() && <div className="note warn no-print eqp-nota">Configura NEXT_PUBLIC_SITE_URL con tu dirección de Vercel antes de imprimir; si no, los QR no abrirán nada.</div>}
 
       <form method="get" className="toolbar no-print">
-        <label className="field">Zona
-          <select id="e-zona" name="zona" defaultValue={f.zona ?? ""}><option value="">Todas</option>{zonas.map((z) => <option key={z}>{z}</option>)}</select>
-        </label>
+        {/* La zona se elige en la barra superior; aquí se conserva al generar. */}
+        {f.zona && <input type="hidden" name="zona" value={f.zona} />}
         <label className="field">Sucursal
           <select id="e-suc" name="sucursal" defaultValue={f.sucursal ?? ""}>
             <option value="">Todas</option>
-            {zonas.map((z) => <optgroup key={z} label={z}>{sucursales.filter((s) => s.zona === z).map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}</optgroup>)}
+            {zonas.filter((z) => !f.zona || z === f.zona).map((z) => <optgroup key={z} label={z}>{sucursales.filter((s) => s.zona === z).map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}</optgroup>)}
           </select>
         </label>
         <label className="field">Códigos (separados por coma)<input id="e-ids" name="ids" defaultValue={f.ids ?? ""} placeholder="PK-CAF-001, PK-REF-002" /></label>
         <button className="btn primary" type="submit">Generar</button>
-        <Link className="btn" href={`/admin/activos/etiquetas?todas=1`}>Todos los equipos</Link>
+        <Link className="btn" href={`/admin/activos/etiquetas?todas=1${f.zona ? `&zona=${encodeURIComponent(f.zona)}` : ""}`}>{f.zona ? "Todos los de la zona" : "Todos los equipos"}</Link>
       </form>
 
       {!filtrado ? (
-        <div className="card no-print"><h3>Elige qué etiquetas imprimir</h3><p className="sub">Filtra por zona o sucursal, escribe códigos, o genera las de todos los equipos.</p></div>
+        <div className="ui-vacio no-print"><b>Elige qué etiquetas imprimir</b><p>Elige la zona en la barra superior o una sucursal, escribe códigos, o genera las de todos los equipos.</p></div>
       ) : lista.length === 0 ? (
-        <div className="card no-print"><h3>Sin equipos con estos filtros</h3><p className="sub">Da de alta los equipos en Equipos → Inventario.</p></div>
+        <div className="ui-vacio no-print"><b>Sin equipos con estos filtros</b><p>Da de alta los equipos en Equipos › Inventario y garantías.</p></div>
       ) : (
         <>
           <p className="sub no-print">{lista.length} etiqueta{lista.length !== 1 ? "s" : ""} · {Math.ceil(lista.length / 4)} hoja{Math.ceil(lista.length / 4) !== 1 ? "s" : ""} carta aprox.</p>

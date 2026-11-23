@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import HojaView from "@/components/HojaView";
+import IconoUI from "@/components/IconoUI";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import type { Hoja } from "@/lib/types";
@@ -17,12 +18,13 @@ export default async function HojaAdmin({ params }: { params: Promise<{ id: stri
     <>
       <main className="wrap">
         <div className="detail-head no-print">
-          <Link href="/admin/hojas" className="btn small">← Servicio · hojas</Link>
+          <Link href="/admin/hojas" className="btn small ghost srv-volver"><IconoUI nombre="izquierda" tam={16} grosor={2.2} />Hojas de servicio</Link>
         </div>
-        <div className="detail" style={{ gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)" }}>
+        <div className="detail srv-hoja">
           <HojaView hoja={hoja} />
-          <form action={revisarHoja} className="card stack no-print">
+          <form action={revisarHoja} className="card stack no-print srv-rev">
             <h3>Revisión</h3>
+            <p className="sub srv-rev-p">{hoja.estado === "Enviada" ? "Revisa costo, fotos y firma; agrega una nota si hace falta y márcala como revisada." : "Esta hoja ya está revisada. Puedes actualizar la nota."}</p>
             <input type="hidden" name="id" value={hoja.id} />
             <label className="field">
               Notas de mantenimiento

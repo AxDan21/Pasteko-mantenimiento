@@ -1,4 +1,6 @@
 import CopiarTexto from "@/components/CopiarTexto";
+import Encabezado from "@/components/Encabezado";
+import IconoUI from "@/components/IconoUI";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { acumuladoPorActivo, leerAjustes } from "@/lib/datos";
@@ -89,22 +91,17 @@ export default async function Reporte({ searchParams }: { searchParams: Promise<
   const texto = `Reporte de mantenimiento · ${nombreMes(mes)}\n\n` + secciones.map(([t, l]) => `${t.toUpperCase()}\n${l.map((x) => `- ${x}`).join("\n")}`).join("\n\n");
 
   return (
-    <main className="wrap">
-      <div className="head-row">
-        <div>
-          <p className="eyebrow">Panel de mantenimiento</p>
-          <h1 className="page-h">Reporte de {nombreMes(mes)}</h1>
-        </div>
-      </div>
+    <main className="wrap rep">
+      <Encabezado titulo={`Reporte de ${nombreMes(mes)}`} sub="Resumen listo para dirección y archivos para Excel o Power BI. El mes se cambia en la barra superior." />
       <div className="panel-grid">
         <section className="card report">
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "start" }}>
+          <div className="rep-cab">
             <div><h3>Resumen para dirección</h3><p className="sub">Se arma solo con los datos del portal.</p></div>
             <CopiarTexto texto={texto} etiqueta="Copiar reporte" className="btn primary" />
           </div>
           {secciones.map(([t, l]) => (
             <div key={t}>
-              <p className="eyebrow" style={{ margin: "16px 0 4px" }}>{t}</p>
+              <p className="eyebrow rep-t">{t}</p>
               <ul>{l.map((x) => <li key={x}>{x}</li>)}</ul>
             </div>
           ))}
@@ -112,9 +109,9 @@ export default async function Reporte({ searchParams }: { searchParams: Promise<
         <section className="card">
           <h3>Exportar a Excel o Power BI</h3>
           <p className="sub">Archivos CSV de {nombreMes(mes)} (activos y refacciones: estado actual).</p>
-          <div className="stack" style={{ gap: 8 }}>
+          <div className="rep-exp">
             {EXPORTS.map(([k, l]) => (
-              <a key={k} className="btn" href={`/admin/exportar?tabla=${k}&mes=${mes}`}>{l}</a>
+              <a key={k} className="btn" href={`/admin/exportar?tabla=${k}&mes=${mes}`}>{l}<IconoUI nombre="derecha" tam={14} grosor={2.2} /></a>
             ))}
           </div>
         </section>

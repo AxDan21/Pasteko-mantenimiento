@@ -1,4 +1,9 @@
 import CajaCfdi from "@/components/CajaCfdi";
+import BotonConfirmar from "@/components/BotonConfirmar";
+import Encabezado from "@/components/Encabezado";
+import { Anillo } from "@/components/Graficas";
+import { Estado } from "@/components/Insignias";
+import Kpi from "@/components/Kpi";
 import CopiarTexto from "@/components/CopiarTexto";
 import PaqueteFacturas, { type ArchivoFactura } from "@/components/PaqueteFacturas";
 import { requireAdmin } from "@/lib/auth";
@@ -44,25 +49,21 @@ export default async function CajaChica({ searchParams }: { searchParams: Promis
       .join("\n");
 
   return (
-    <main className="wrap">
-      <div className="head-row">
-        <div>
-          <p className="eyebrow">Panel de mantenimiento · {nombreMes(mes)}</p>
-          <h1 className="page-h">Caja chica</h1>
-        </div>
+    <main className="wrap caja">
+      <Encabezado titulo="Caja chica" sub={`Gastos menores de ${nombreMes(mes)} con su comprobante. El fondo mensual se cambia en Gastos.`} />
+
+      {f.ok && <div className="note ok eqp-nota" role="status">Movimiento registrado.</div>}
+      {f.error && <div className="note bad eqp-nota" role="alert">{f.error}</div>}
+
+      <div className="rz-kpis srv-kpis">
+        <Kpi icono="caja" tono="info" titulo="Fondo mensual" valor={mxn(ajustes.fondo_caja_chica)} detalle="se cambia en Gastos" />
+        <Kpi icono="dinero" tono="marca" titulo="Gastado" valor={mxn(gastado)} detalle={`${movs.length} movimiento${movs.length !== 1 ? "s" : ""}`}
+          grafica={<Anillo pct={(gastado / (ajustes.fondo_caja_chica || 1)) * 100} color={gastado > ajustes.fondo_caja_chica * 0.85 ? "var(--bad)" : "var(--chart-1)"} tam={56} grosor={7}><b className="num">{Math.round((gastado / (ajustes.fondo_caja_chica || 1)) * 100)}%</b></Anillo>} />
+        <Kpi icono="meta" tono={saldo < 0 ? "bad" : "ok"} titulo="Saldo" valor={mxn(saldo)} alerta={saldo < 0} detalle={`disponible en ${nombreMes(mes)}`} />
+        <Kpi icono="falla" tono="bad" titulo="Sin factura" valor={sinF.length} alerta={sinF.length > 0} detalle={`${mxn(sinF.reduce((s, m) => s + Number(m.monto), 0))} por comprobar`} />
       </div>
 
-      {f.ok && <div className="note ok" style={{ marginBottom: 14 }}>Movimiento registrado.</div>}
-      {f.error && <div className="note bad" style={{ marginBottom: 14 }}>{f.error}</div>}
-
-      <div className="kpis">
-        <div className="kpi"><span className="eyebrow">Fondo mensual</span><span className="v">{mxn(ajustes.fondo_caja_chica)}</span><span className="s">Se cambia en Gastos</span></div>
-        <div className="kpi"><span className="eyebrow">Gastado</span><span className="v">{mxn(gastado)}</span><div className="bar"><i className={gastado > ajustes.fondo_caja_chica * 0.85 ? "warn" : ""} style={{ width: `${Math.min((gastado / (ajustes.fondo_caja_chica || 1)) * 100, 100)}%` }} /></div><span className="s">{movs.length} movimientos</span></div>
-        <div className="kpi"><span className="eyebrow">Saldo</span><span className="v" style={{ color: saldo < 0 ? "var(--bad)" : undefined }}>{mxn(saldo)}</span><span className="s">Disponible en {nombreMes(mes)}</span></div>
-        <div className="kpi"><span className="eyebrow">Sin factura</span><span className="v" style={{ color: sinF.length ? "var(--bad)" : "var(--ok)" }}>{sinF.length}</span><span className="s">{mxn(sinF.reduce((s, m) => s + Number(m.monto), 0))} por comprobar</span></div>
-      </div>
-
-      <section className="card" id="nuevo" style={{ marginBottom: 18, scrollMarginTop: 80 }}>
+      <section className="card caja-nueva" id="nuevo">
         <h3>Registrar factura</h3>
         <p className="sub">Suelta el XML y el PDF juntos: proveedor, conceptos, fecha y total se llenan solos. Solo elige la sucursal.</p>
         <CajaCfdi sucursales={(suc ?? []) as { id: number; nombre: string }[]} hoy={hoy()} saldo={saldo} />
@@ -79,47 +80,47 @@ export default async function CajaChica({ searchParams }: { searchParams: Promis
         </details>
       </section>
 
-      <div className="toolbar" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <h3 style={{ fontSize: 17 }}>Movimientos de {nombreMes(mes)}</h3>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <div className="prv-barra">
+        <h2 className="ref-h">Movimientos de {nombreMes(mes)}</h2>
+        <div className="secc-acc">
           {paquete.length > 0 && <PaqueteFacturas facturas={paquete} etiqueta={nombreMes(mes)} titulo="Caja chica" />}
           <CopiarTexto texto={movs.length ? comprobacion : ""} etiqueta="Copiar comprobación" />
         </div>
       </div>
       {movs.length ? (
         <div className="tbl-wrap">
-          <table>
-            <thead><tr><th>Fecha</th><th>Concepto</th><th>Sucursal</th><th className="r">Monto</th><th>Factura</th><th /></tr></thead>
+          <table className="tbl-cards">
+            <thead><tr><th>Fecha</th><th>Concepto</th><th>Sucursal</th><th className="r">Monto</th><th>Factura</th><th><span className="sr-only">Acciones</span></th></tr></thead>
             <tbody>
               {movs.map((m) => (
                 <tr key={m.id}>
-                  <td className="num">{fCorta(m.fecha)}</td>
-                  <td>{m.proveedor && <b className="caja-prov">{m.proveedor}</b>}{m.concepto}</td>
-                  <td>{m.sucursal_id ? sucPorId.get(m.sucursal_id) : "General"}</td>
-                  <td className="r num">{mxn(Number(m.monto))}</td>
-                  <td>
+                  <td data-label="Fecha" className="num">{fCorta(m.fecha)}</td>
+                  <td data-label="Concepto">{m.proveedor && <b className="caja-prov">{m.proveedor}</b>}{m.concepto}</td>
+                  <td data-label="Sucursal">{m.sucursal_id ? sucPorId.get(m.sucursal_id) : "General"}</td>
+                  <td data-label="Monto" className="r num">{mxn(Number(m.monto))}</td>
+                  <td data-label="Factura">
                     {m.factura_path ? (
-                      <span style={{ display: "flex", gap: 6 }}>
+                      <span className="caja-docs">
                         <a className="btn small" href={urls.get(m.factura_path)} target="_blank" rel="noopener noreferrer">{m.factura_uuid ? "PDF" : "Ver"}</a>
                         {m.xml_path && <a className="btn small" href={urls.get(m.xml_path)} target="_blank" rel="noopener noreferrer">XML</a>}
                       </span>
                     ) : (
-                      <form action={adjuntarFacturaCaja} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <form action={adjuntarFacturaCaja} className="caja-subir">
+                        <Estado tono="bad">Falta</Estado>
                         <input type="hidden" name="id" value={m.id} />
-                        <input name="factura" type="file" accept="image/*,application/pdf" required aria-label="Factura" style={{ maxWidth: 190, fontSize: 13 }} />
+                        <input name="factura" type="file" accept="image/*,application/pdf" required aria-label={`Factura de ${m.concepto}`} />
                         <button className="btn small" type="submit">Subir</button>
-                        <span className="pill bad">Falta</span>
                       </form>
                     )}
                   </td>
-                  <td className="r"><form action={borrarMovCaja}><input type="hidden" name="id" value={m.id} /><button className="btn small danger" type="submit">Borrar</button></form></td>
+                  <td className="r"><form action={borrarMovCaja}><input type="hidden" name="id" value={m.id} /><BotonConfirmar mensaje={`¿Borrar el movimiento "${m.concepto}" de ${mxn(Number(m.monto))}? No se puede deshacer.`}>Borrar</BotonConfirmar></form></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : (
-        <div className="card"><h3>Sin movimientos en {nombreMes(mes)}</h3><p className="sub">Registra el primero arriba.</p></div>
+        <div className="ui-vacio"><b>Sin movimientos en {nombreMes(mes)}</b><p>Registra el primero con «Registrar factura» o como gasto sin factura.</p></div>
       )}
     </main>
   );

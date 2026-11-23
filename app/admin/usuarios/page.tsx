@@ -1,5 +1,9 @@
 import Link from "next/link";
 import Seccion from "@/components/Seccion";
+import Desplegable from "@/components/Desplegable";
+import IconoUI from "@/components/IconoUI";
+import { Estado } from "@/components/Insignias";
+import type { NombreIcono } from "@/lib/iconos";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
@@ -12,11 +16,11 @@ import { actualizarTecnico, cambiarPassword, crearTecnico } from "../actions";
 export const metadata = { title: "Usuarios · Pasteko" };
 
 type Rol = Perfil["rol"];
-const ROLES: { rol: Rol; nombre: string; plural: string; hace: string; icono: string }[] = [
-  { rol: "tecnico", nombre: "Técnico", plural: "Técnicos", hace: "Atienden reportes y llenan hojas de servicio", icono: "🔧" },
-  { rol: "supervisor", nombre: "Supervisor", plural: "Supervisores", hace: "Hacen el censo de equipos de su zona", icono: "📋" },
-  { rol: "admin", nombre: "Administrador", plural: "Administradores", hace: "Acceso completo al panel", icono: "🛡" },
-  { rol: "consulta", nombre: "Consulta", plural: "Consulta", hace: "Solo ven el avance de aperturas", icono: "👁" },
+const ROLES: { rol: Rol; nombre: string; plural: string; hace: string; icono: NombreIcono }[] = [
+  { rol: "tecnico", nombre: "Técnico", plural: "Técnicos", hace: "Atienden reportes y llenan hojas de servicio", icono: "servicio" },
+  { rol: "supervisor", nombre: "Supervisor", plural: "Supervisores", hace: "Hacen el censo de equipos de su zona", icono: "censo" },
+  { rol: "admin", nombre: "Administrador", plural: "Administradores", hace: "Acceso completo al panel", icono: "escudo" },
+  { rol: "consulta", nombre: "Consulta", plural: "Consulta", hace: "Solo ven el avance de aperturas", icono: "ojo" },
 ];
 const MSG: Record<string, string> = {
   zona: "Para un supervisor elige su zona: solo verá y registrará equipos de esas sucursales.",
@@ -79,30 +83,28 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
   return (
     <main className="wrap">
       <Seccion
-        eyebrow="Panel de mantenimiento"
         titulo="Usuarios"
         sub="Quién entra a la app y qué puede hacer. Las tiendas no necesitan usuario: reportan desde el QR."
         vistas={vistas}
         activa="usuarios"
       />
 
-      {f.ok && <div className="note ok" style={{ marginBottom: 14 }}>{f.ok === "password" ? "Contraseña actualizada. Compártela por privado." : "Usuario creado. Compártele su correo y contraseña por privado."}</div>}
-      {f.error && <div className="note bad" style={{ marginBottom: 14 }}>{MSG[f.error] ?? `No se pudo completar: ${f.error}`}</div>}
-      {sinZona > 0 && <div className="note warn" style={{ marginBottom: 14 }}>{sinZona} supervisor{sinZona > 1 ? "es" : ""} sin zona: no verán ninguna sucursal en el censo. Asígnales una en Ajustes.</div>}
+      {f.ok && <div className="note ok eqp-nota" role="status">{f.ok === "password" ? "Contraseña actualizada. Compártela por privado." : "Usuario creado. Compártele su correo y contraseña por privado."}</div>}
+      {f.error && <div className="note bad eqp-nota" role="alert">{MSG[f.error] ?? `No se pudo completar: ${f.error}`}</div>}
+      {sinZona > 0 && <div className="note warn eqp-nota">{sinZona} supervisor{sinZona > 1 ? "es" : ""} sin zona: no verán ninguna sucursal en el censo. Asígnales una en Ajustes.</div>}
 
       <nav className="usr-roles" aria-label="Filtrar por rol">
         <Link href="/admin/usuarios" className={!filtro ? "on" : ""}><b className="num">{perfiles.filter((p) => p.activo).length}</b><span>Todos</span><small>usuarios activos</small></Link>
         {ROLES.map((r) => (
           <Link key={r.rol} href={`/admin/usuarios?rol=${r.rol}`} className={filtro === r.rol ? "on" : ""}>
             <b className="num">{perfiles.filter((p) => p.rol === r.rol && p.activo).length}</b>
-            <span>{r.icono} {r.plural}</span><small>{r.hace}</small>
+            <span className="usr-rol-t"><IconoUI nombre={r.icono} tam={16} grosor={2} />{r.plural}</span><small>{r.hace}</small>
           </Link>
         ))}
       </nav>
 
-      <details className="card alta-det" open={!!f.error && f.error !== "password"}>
-        <summary><h3>Dar de alta usuario</h3><span className="btn primary small">+ Nuevo usuario</span></summary>
-        <p className="sub">Entra con este correo y contraseña. Si es supervisor, su zona define qué sucursales ve en el censo.</p>
+      <Desplegable id="nuevo" titulo="Dar de alta usuario" abierto={!!f.error && f.error !== "password"}
+        detalle="Entra con este correo y contraseña. Si es supervisor, su zona define qué sucursales ve en el censo.">
         <form action={crearTecnico} className="inline-form">
           <label className="field">Rol
             <select id="u-rol" name="rol" defaultValue={filtro ?? "tecnico"}>
@@ -126,11 +128,11 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
           </label>
           <button className="btn primary" type="submit">Dar de alta</button>
         </form>
-      </details>
+      </Desplegable>
 
       {grupos.map((g) => (
         <section key={g.rol} className="usr-grupo">
-          <h2 className="sec-title">{g.icono} {g.plural} <span className="sub">· {g.gente.filter((p) => p.activo).length} activos</span></h2>
+          <h2 className="sec-title usr-grupo-t"><span className="ui-ic"><IconoUI nombre={g.icono} tam={15} grosor={2} /></span>{g.plural} <span className="sub">· {g.gente.filter((p) => p.activo).length} activos</span></h2>
           <ul className="usr-lista">
             {g.gente.map((p) => {
               const r = tec.get(p.id);
@@ -140,9 +142,9 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
                 <li key={p.id} className={`usr ${p.activo ? "" : "off"}`}>
                   <span className={`usr-av r-${p.rol}`} aria-hidden>{iniciales(p.nombre)}</span>
                   <div className="usr-id">
-                    <b>{p.nombre}{p.id === userId && <span className="pill neutral" style={{ marginLeft: 8 }}>Tú</span>}</b>
+                    <b>{p.nombre}{p.id === userId && <> <Estado tono="neutral">Tú</Estado></>}</b>
                     <span className="usr-mail">{correos.get(p.id) ?? "—"}</span>
-                    <span className="usr-zona">{p.zona ?? (p.rol === "supervisor" ? "⚠ Sin zona" : "Sin zona")}</span>
+                    <span className="usr-zona">{p.zona ?? (p.rol === "supervisor" ? <Estado tono="warn">Sin zona</Estado> : "Sin zona")}</span>
                     {p.rol === "tecnico" && (
                       <span className={`usr-tipo ${p.tipo_tecnico === "proveedor" ? "prov" : ""}`}>{p.tipo_tecnico === "proveedor" ? "Proveedor · cobra por servicio" : "Propio · sueldo"}</span>
                     )}
@@ -172,7 +174,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
                   </div>
 
                   <div className="usr-acc">
-                    <span className={`pill ${p.activo ? "ok" : "bad"}`}>{p.activo ? "Activo" : "Desactivado"}</span>
+                    <Estado tono={p.activo ? "ok" : "bad"}>{p.activo ? "Activo" : "Desactivado"}</Estado>
                     <details className="usr-aj">
                       <summary className="btn small">Ajustes</summary>
                       <div className="usr-pop">
@@ -221,7 +223,7 @@ export default async function Usuarios({ searchParams }: { searchParams: Promise
           </ul>
         </section>
       ))}
-      <p className="sub" style={{ marginTop: 10 }}>Desactivar impide entrar a la app; su historial (hojas, censo) se conserva.</p>
+      <p className="sub usr-pie">Desactivar impide entrar a la app; su historial (hojas, censo) se conserva.</p>
     </main>
   );
 }

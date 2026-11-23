@@ -1,3 +1,5 @@
+import IconoUI from "@/components/IconoUI";
+import { Estado, Prioridad } from "@/components/Insignias";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
@@ -40,14 +42,14 @@ export default async function DetalleTicket({ params }: { params: Promise<{ id: 
 
   return (
     <main className="wrap">
-      <Link href="/admin/tickets" className="btn small" style={{ marginBottom: 14 }}>← Reportes</Link>
+      <Link href="/admin/tickets" className="btn small ghost srv-volver"><IconoUI nombre="izquierda" tam={16} grosor={2.2} />Reportes</Link>
 
       <section className={`tkd-cab p-${t.prioridad}`}>
         <div className="tkd-cab-l">
           <div className="tkb-l1">
             <span className="num tkd-folio">{folio}</span>
-            <span className={`pill ${ESTADOS[t.estado].clase}`}>{ESTADOS[t.estado].nombre}</span>
-            <span className={`pill ${PRIORIDAD[t.prioridad].clase}`}>{PRIORIDAD[t.prioridad].nombre}</span>
+            <Estado tono={ESTADOS[t.estado].clase}>{ESTADOS[t.estado].nombre}</Estado>
+            <Prioridad nivel={t.prioridad}>{PRIORIDAD[t.prioridad].nombre}</Prioridad>
           </div>
           <h1>{t.sintoma}</h1>
           <p>{t.sucursales?.nombre} · {t.equipo}{t.activo_id && <> · <Link href={`/admin/activos/${t.activo_id}`} className="num">{t.activo_id}</Link></>}</p>

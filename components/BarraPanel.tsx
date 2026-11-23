@@ -3,24 +3,34 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { buscarPanel, type Resultado } from "@/app/admin/buscar";
-import { CON_PERIODO, CREAR, EVENTO_MES, GRUPOS, LLAVE_MES } from "@/lib/menu-admin";
+import IconoUI from "@/components/IconoUI";
+import SelectorTema from "@/components/SelectorTema";
+import type { Contador } from "@/lib/contadores";
+import { CON_PERIODO, CON_ZONA, CREAR, EVENTO_MES, GRUPOS, LLAVE_MES, LLAVE_ZONA, ubicacion } from "@/lib/menu-admin";
 import { mesActual, nombreMes, sumarMeses } from "@/lib/panel";
 
 const MODULOS: Resultado[] = GRUPOS.flatMap((g) => g.items.map((it) => ({ grupo: "Ir a", titulo: it.label, detalle: g.titulo, href: it.href })));
 const ACCIONES: Resultado[] = CREAR.map((c) => ({ grupo: "Crear", titulo: c.label, detalle: c.detalle, href: c.href }));
 const sinAcentos = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-/** Barra superior del panel: periodo compartido entre módulos, búsqueda (⌘K) y "+ Nuevo". */
-export default function BarraPanel() {
+/**
+ * Barra superior del panel: ruta, periodo y ámbito (zona) compartidos entre módulos, tema, avisos,
+ * búsqueda (⌘K) y "+ Nuevo".
+ */
+export default function BarraPanel({ zonas = [], avisos }: { zonas?: string[]; avisos?: Contador }) {
   const path = usePathname();
   const params = useSearchParams();
   const router = useRouter();
   const conPeriodo = CON_PERIODO.includes(path);
+  const conZona = CON_ZONA.includes(path) && zonas.length > 1;
   const hoyMes = mesActual();
   const mesUrl = params.get("mes");
   const mes = mesUrl && /^\d{4}-\d{2}$/.test(mesUrl) && mesUrl <= hoyMes ? mesUrl : hoyMes;
+  const zonaUrl = params.get("zona");
+  const zona = zonaUrl && zonas.includes(zonaUrl) ? zonaUrl : "";
+  const donde = ubicacion(path);
 
-  // El mes de la URL es el que manda; se recuerda para los demás módulos con periodo.
+  // La URL es la que manda; el periodo y el ámbito se recuerdan para los demás módulos que los usan.
   useEffect(() => {
     if (!conPeriodo) return;
     try {
@@ -29,6 +39,21 @@ export default function BarraPanel() {
       window.dispatchEvent(new Event(EVENTO_MES));
     } catch { /* sin almacenamiento: el periodo solo vive en la URL */ }
   }, [conPeriodo, mes, hoyMes]);
+  useEffect(() => {
+    if (!CON_ZONA.includes(path)) return;
+    try {
+      if (zona) sessionStorage.setItem(LLAVE_ZONA, zona);
+      else sessionStorage.removeItem(LLAVE_ZONA);
+      window.dispatchEvent(new Event(EVENTO_MES));
+    } catch { /* sin almacenamiento: el ámbito solo vive en la URL */ }
+  }, [path, zona]);
+
+  const irZona = (z: string) => {
+    const q = new URLSearchParams(params.toString());
+    if (z) q.set("zona", z); else q.delete("zona");
+    const s = q.toString();
+    router.push(s ? `${path}?${s}` : path);
+  };
 
   const irMes = (m: string) => {
     if (!/^\d{4}-\d{2}$/.test(m)) return;
@@ -96,22 +121,49 @@ export default function BarraPanel() {
 
   return (
     <div className="bp no-print">
-      {conPeriodo ? (
-        <div className="bp-mes" role="group" aria-label="Periodo">
-          <button type="button" onClick={() => irMes(sumarMeses(mes, -1))} aria-label="Mes anterior">‹</button>
-          <label>
-            <span className="bp-mes-n">{nombreMes(mes)}</span>
-            <small>{mes === hoyMes ? "Mes en curso" : "Mes cerrado"}</small>
-            <input type="month" value={mes} max={hoyMes} onChange={(e) => irMes(e.target.value)} aria-label="Elegir mes" />
+      <div className="bp-izq">
+        {donde && (
+          <nav className="bp-ruta" aria-label="Ruta">
+            <span>Panel</span>
+            {donde.grupo && <><IconoUI nombre="derecha" tam={14} /><span>{donde.grupo}</span></>}
+            <IconoUI nombre="derecha" tam={14} />
+            <b aria-current="page">{donde.modulo}</b>
+          </nav>
+        )}
+        {conPeriodo && (
+          <div className="bp-mes" role="group" aria-label="Periodo">
+            <button type="button" onClick={() => irMes(sumarMeses(mes, -1))} aria-label="Mes anterior"><IconoUI nombre="izquierda" tam={18} grosor={2.2} /></button>
+            <label>
+              <span className="bp-mes-n">{nombreMes(mes)}</span>
+              <small>{mes === hoyMes ? "Mes en curso" : "Mes cerrado"}</small>
+              <input type="month" value={mes} max={hoyMes} onChange={(e) => irMes(e.target.value)} aria-label="Elegir mes" />
+            </label>
+            <button type="button" onClick={() => irMes(sumarMeses(mes, 1))} disabled={mes >= hoyMes} aria-label="Mes siguiente"><IconoUI nombre="derecha" tam={18} grosor={2.2} /></button>
+            {mes !== hoyMes && <button type="button" className="bp-hoy" onClick={() => irMes(hoyMes)}>Ir a hoy</button>}
+          </div>
+        )}
+        {conZona && (
+          <label className={`bp-ambito${zona ? " activo" : ""}`}>
+            <IconoUI nombre="sucursales" tam={16} />
+            <span className="sr-only">Ámbito</span>
+            <select value={zona} onChange={(e) => irZona(e.target.value)}>
+              <option value="">Todas las zonas</option>
+              {zonas.map((z) => <option key={z} value={z}>{z}</option>)}
+            </select>
           </label>
-          <button type="button" onClick={() => irMes(sumarMeses(mes, 1))} disabled={mes >= hoyMes} aria-label="Mes siguiente">›</button>
-          {mes !== hoyMes && <button type="button" className="bp-hoy" onClick={() => irMes(hoyMes)}>Ir a hoy</button>}
-        </div>
-      ) : <span />}
+        )}
+      </div>
 
       <div className="bp-der">
-        <button type="button" className="bp-buscar" onClick={abrirBusca} aria-haspopup="dialog">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <SelectorTema />
+        <Link href="/admin/tickets?f=sin_asignar" className="ui-ibtn bp-avisos"
+          aria-label={avisos?.n ? `Avisos: ${avisos.n} ${avisos.n === 1 ? "reporte nuevo" : "reportes nuevos"} sin técnico` : "Avisos: no hay reportes nuevos sin técnico"}
+          title="Reportes nuevos sin técnico">
+          <IconoUI nombre="campana" />
+          {avisos && avisos.n > 0 && <span className={`bp-avisos-n${avisos.alerta ? " alerta" : ""}`} aria-hidden="true">{avisos.n > 99 ? "99+" : avisos.n}</span>}
+        </Link>
+        <button type="button" className="bp-buscar" onClick={abrirBusca} aria-haspopup="dialog" aria-label="Buscar">
+          <IconoUI nombre="buscar" tam={17} grosor={2} />
           <span>Buscar</span>
           <kbd>⌘K</kbd>
         </button>

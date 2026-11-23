@@ -1,5 +1,9 @@
 import Link from "next/link";
 import CopiarTexto from "@/components/CopiarTexto";
+import { Estado } from "@/components/Insignias";
+import Kpi from "@/components/Kpi";
+import Seccion from "@/components/Seccion";
+import { vistasPreventivos } from "@/lib/secciones";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { fCorta, hoy, sumarDias } from "@/lib/panel";
@@ -23,13 +27,14 @@ export default async function PlanPreventivos({ searchParams }: { searchParams: 
   const h = hoy(), limite = sumarDias(h, dias);
   const volver = `/admin/preventivos/plan?dias=${dias}`;
 
-  const [{ data: p }, { data: todosPend }, { data: s }, { data: t }, { data: hs }, { data: a }] = await Promise.all([
+  const [{ data: p }, { data: todosPend }, { data: s }, { data: t }, { data: hs }, { data: a }, vistas] = await Promise.all([
     supabase.from("preventivos").select("id, fecha, sucursal_id, equipo, tarea, tecnico_id").eq("hecho", false).lte("fecha", limite).order("fecha"),
     supabase.from("preventivos").select("sucursal_id, equipo").eq("hecho", false),
     supabase.from("sucursales").select("id, nombre, zona, lat, lng").eq("activa", true),
     supabase.from("perfiles").select("id, nombre, base_nombre, base_lat, base_lng").eq("rol", "tecnico").eq("activo", true).order("nombre"),
     supabase.from("hojas_servicio").select("sucursal_id, equipo, tipo, creada, falla").gte("creada", `${sumarDias(h, -90)}T00:00:00`),
     supabase.from("activos").select("sucursal_id, equipo").eq("activo", true),
+    vistasPreventivos(supabase),
   ]);
 
   const todas = (s ?? []) as { id: number; nombre: string; zona: string; lat: number | null; lng: number | null }[];
@@ -54,31 +59,32 @@ export default async function PlanPreventivos({ searchParams }: { searchParams: 
       "", `Ruta (~${x.km} km): ${enlaceRuta(x)}`].join("\n");
 
   return (
-    <main className="wrap">
-      <div className="head-row">
-        <div>
-          <p className="eyebrow"><Link href="/admin/preventivos">Preventivos</Link> · plan inteligente</p>
-          <h1 className="page-h">Salidas de la semana y más</h1>
-          <p className="sub" style={{ margin: 0 }}>Preventivos agrupados por técnico y cercanía, con la ruta lista para mandar.</p>
-        </div>
-        <nav className="seg-mini" aria-label="Periodo">
-          {PERIODOS.map((d) => <Link key={d} href={`/admin/preventivos/plan?dias=${d}`} aria-current={d === dias ? "page" : undefined}>{d} días</Link>)}
-        </nav>
-      </div>
+    <main className="wrap prv">
+      <Seccion
+        titulo="Preventivos"
+        sub="Plan de salidas: los preventivos pendientes agrupados por técnico y cercanía, con la ruta lista para mandar."
+        vistas={vistas}
+        activa="plan"
+        acciones={
+          <nav className="seg-mini" aria-label="Periodo">
+            {PERIODOS.map((d) => <Link key={d} href={`/admin/preventivos/plan?dias=${d}`} aria-current={d === dias ? "page" : undefined}>{d} días</Link>)}
+          </nav>
+        }
+      />
 
-      {f.ok?.startsWith("programada-") && <div className="note ok" style={{ marginBottom: 14 }}>Salida programada: {f.ok.slice(11)} preventivo(s) movidos a esa fecha y asignados al técnico.</div>}
-      {f.ok?.startsWith("creados-") && <div className="note ok" style={{ marginBottom: 14 }}>Se crearon {f.ok.slice(8)} preventivo(s). Ya aparecen en las salidas.</div>}
-      {f.error && <div className="note bad" style={{ marginBottom: 14 }}>{f.error}</div>}
+      {f.ok?.startsWith("programada-") && <div className="note ok prv-nota" role="status">Salida programada: {f.ok.slice(11)} preventivo(s) movidos a esa fecha y asignados al técnico.</div>}
+      {f.ok?.startsWith("creados-") && <div className="note ok prv-nota" role="status">Se crearon {f.ok.slice(8)} preventivo(s). Ya aparecen en las salidas.</div>}
+      {f.error && <div className="note bad prv-nota" role="alert">{f.error}</div>}
 
-      <div className="kpis">
-        <div className="kpi"><span className="eyebrow">Salidas propuestas</span><span className="v">{salidas.length}</span><span className="s">{prevs.length} preventivos en {dias} días</span></div>
-        <div className="kpi"><span className="eyebrow">Urgentes</span><span className="v" style={urgentes ? { color: "var(--bad)" } : undefined}>{urgentes}</span><span className="s">Con preventivos vencidos</span></div>
-        <div className="kpi"><span className="eyebrow">Kilómetros</span><span className="v">~{kmTotal.toLocaleString("es-MX")}</span><span className="s">Ida y vuelta, por carretera aprox.</span></div>
-        <div className="kpi"><span className="eyebrow">Ahorro por agrupar</span><span className="v" style={{ color: "var(--ok)" }}>~{ahorro.toLocaleString("es-MX")} km</span><span className="s">Contra ir a cada tienda por separado</span></div>
+      <div className="rz-kpis srv-kpis">
+        <Kpi icono="sucursales" tono="info" titulo="Salidas propuestas" valor={salidas.length} detalle={`${prevs.length} preventivos en ${dias} días`} />
+        <Kpi icono="reloj" tono="bad" titulo="Urgentes" valor={urgentes} alerta={urgentes > 0} detalle="con preventivos vencidos" />
+        <Kpi icono="reporte" tono="marca" titulo="Kilómetros" valor={`~${kmTotal.toLocaleString("es-MX")}`} detalle="ida y vuelta, por carretera aprox." />
+        <Kpi icono="check" tono="ok" titulo="Ahorro por agrupar" valor={`~${ahorro.toLocaleString("es-MX")} km`} detalle="contra ir a cada tienda por separado" />
       </div>
 
       {(!tecnicos.length || sinUbicacion.length > 0 || sinTecnico.length > 0) && (
-        <div className="note warn" style={{ marginBottom: 14 }}>
+        <div className="note warn prv-nota">
           {!tecnicos.length && <>Ningún técnico tiene base (tabla perfiles: base_lat, base_lng); sin eso no se pueden armar rutas. </>}
           {sinUbicacion.length > 0 && <>Fuera del plan por no tener ubicación: {sinUbicacion.map((id) => nombreSuc.get(id) ?? id).join(", ")}. </>}
         </div>
@@ -109,7 +115,7 @@ export default async function PlanPreventivos({ searchParams }: { searchParams: 
 
       <h2 className="plan-h">Salidas propuestas</h2>
       {!salidas.length && (
-        <div className="card"><h3>Nada que programar</h3><p className="sub">No hay preventivos pendientes en los próximos {dias} días con sucursal ubicada y técnico con base.</p></div>
+        <div className="ui-vacio"><b>Nada que programar</b><p>No hay preventivos pendientes en los próximos {dias} días con sucursal ubicada y técnico con base.</p></div>
       )}
       <div className="plan-grid">
         {salidas.map((x) => {
@@ -122,7 +128,7 @@ export default async function PlanPreventivos({ searchParams }: { searchParams: 
                   <b>{x.tecnico.nombre}</b>
                   <small>{diaLargo(x.fecha)} · {x.paradas.length} sucursal{x.paradas.length !== 1 ? "es" : ""} · {x.preventivos} preventivo{x.preventivos !== 1 ? "s" : ""}</small>
                 </div>
-                {lista ? <span className="pill ok">Programada</span> : x.urgente ? <span className="pill bad">Urgente</span> : null}
+                {lista ? <Estado tono="ok">Programada</Estado> : x.urgente ? <Estado tono="bad">Urgente</Estado> : null}
               </header>
 
               <ol className="plan-ruta">

@@ -1,5 +1,6 @@
 import type { Vista } from "@/components/Seccion";
 import type { createClient } from "@/lib/supabase/server";
+import { hoy } from "@/lib/panel";
 
 type Db = Awaited<ReturnType<typeof createClient>>;
 
@@ -44,5 +45,14 @@ export async function vistasUsuarios(db: Db): Promise<Vista[]> {
   return [
     { clave: "usuarios", href: "/admin/usuarios", nombre: "Usuarios de la app", cuenta: usuarios ?? 0 },
     { clave: "proveedores", href: "/admin/usuarios/proveedores", nombre: "Proveedores externos", cuenta: proveedores ?? 0 },
+  ];
+}
+
+/** Preventivos = lista programada + plan de salidas por técnico y cercanía. */
+export async function vistasPreventivos(db: Db): Promise<Vista[]> {
+  const { count: vencidos } = await db.from("preventivos").select("id", { count: "exact", head: true }).eq("hecho", false).lt("fecha", hoy());
+  return [
+    { clave: "lista", href: "/admin/preventivos", nombre: "Programados", cuenta: vencidos ?? 0, alerta: (vencidos ?? 0) > 0 },
+    { clave: "plan", href: "/admin/preventivos/plan", nombre: "Plan de salidas" },
   ];
 }

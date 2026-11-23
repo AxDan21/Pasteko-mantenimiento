@@ -1,5 +1,9 @@
 /* eslint-disable @next/next/no-img-element */
 import QRCode from "qrcode";
+import BotonConfirmar from "@/components/BotonConfirmar";
+import Desplegable from "@/components/Desplegable";
+import Encabezado from "@/components/Encabezado";
+import { Estado } from "@/components/Insignias";
 import Icono, { ICONOS } from "@/components/Icono";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -12,7 +16,7 @@ function Borrar({ tabla, id, que }: { tabla: string; id: number; que: string }) 
     <form action={borrar}>
       <input type="hidden" name="tabla" value={tabla} />
       <input type="hidden" name="id" value={id} />
-      <button className="btn small danger" type="submit" aria-label={`Borrar ${que}`}>Borrar</button>
+      <BotonConfirmar mensaje={`¿Borrar "${que}"? Dejará de verse en la página de tiendas y no se puede deshacer.`}>Borrar<span className="sr-only"> {que}</span></BotonConfirmar>
     </form>
   );
 }
@@ -35,42 +39,36 @@ export default async function Contenido() {
 
   return (
     <>
-      <main className="wrap">
-        <div className="head-row">
-          <div>
-            <p className="eyebrow">Panel de mantenimiento</p>
-            <h1 className="page-h">Contenido para tiendas</h1>
-            <p className="sub">Lo que publiques aquí aparece en la página pública en menos de 5 minutos. Imprime el QR de cada equipo y pégalo junto a él.</p>
-          </div>
-        </div>
+      <main className="wrap cnt">
+        <Encabezado titulo="Contenido para tiendas" sub="Videos y problemas comunes por tipo de equipo. Lo que publiques aparece en la página pública en menos de 5 minutos. Imprime el QR de cada equipo y pégalo junto a él." />
 
         {equipos.map((eq) => {
           const vs = videos.filter((x) => x.equipo_id === eq.id), fs = faqs.filter((x) => x.equipo_id === eq.id);
           return (
             <details key={eq.id} className="card content-eq">
               <summary>
-                <span style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <span className="cnt-eq">
                   <span className="eq-ico"><Icono nombre={eq.icono} /></span>
                   <span>
-                    <b style={{ fontSize: 18 }}>{eq.nombre}</b><br />
-                    <small style={{ color: "var(--muted)" }}>{eq.categoria}{eq.prefijo ? ` · código PK-${eq.prefijo}` : ""} · {vs.length} videos · {fs.length} preguntas</small>
+                    <b className="cnt-eq-n">{eq.nombre}</b>
+                    <small className="srv-sub">{eq.categoria}{eq.prefijo ? ` · código PK-${eq.prefijo}` : ""} · {vs.length} videos · {fs.length} preguntas</small>
                   </span>
                 </span>
-                {eq.vigente === false ? <span className="pill neutral">Fuera de catálogo</span> : <span className={`pill ${eq.publicado ? "ok" : "neutral"}`}>{eq.publicado ? "Con guía para tiendas" : "Sin guía (solo censo)"}</span>}
+                {eq.vigente === false ? <Estado tono="neutral">Fuera de catálogo</Estado> : <Estado tono={eq.publicado ? "ok" : "neutral"}>{eq.publicado ? "Con guía para tiendas" : "Sin guía (solo censo)"}</Estado>}
               </summary>
 
-              <div className="detail" style={{ marginTop: 16 }}>
+              <div className="detail cnt-det">
                 <div className="stack">
                   <div>
                     <p className="eyebrow">Videos</p>
                     {vs.map((x) => (
                       <div key={x.id} className="item-row">
-                        <span style={{ minWidth: 0 }}>
-                          <b>{x.titulo}</b> {x.duracion && <span className="num" style={{ color: "var(--muted)" }}>{x.duracion}</span>}
-                          {!youtubeId(x.youtube_url) && <span className="pill warn" style={{ marginLeft: 6 }}>Falta enlace</span>}
-                          <form action={actualizarVideo} style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                        <span className="cnt-item">
+                          <b>{x.titulo}</b> {x.duracion && <span className="num srv-sub cnt-dur">{x.duracion}</span>}
+                          {!youtubeId(x.youtube_url) && <> <Estado tono="warn">Falta enlace</Estado></>}
+                          <form action={actualizarVideo} className="cnt-url">
                             <input type="hidden" name="id" value={x.id} />
-                            <input name="youtube_url" defaultValue={x.youtube_url} aria-label="Enlace de YouTube" style={{ flex: 1, minWidth: 0, border: "1px solid var(--line)", borderRadius: 8, padding: 6, background: "var(--surface)" }} />
+                            <input name="youtube_url" defaultValue={x.youtube_url} aria-label={`Enlace de YouTube de ${x.titulo}`} className="mini-input" />
                             <button className="btn small" type="submit">Guardar</button>
                           </form>
                         </span>
@@ -91,7 +89,7 @@ export default async function Contenido() {
                     <p className="eyebrow">Problemas comunes</p>
                     {fs.map((x) => (
                       <div key={x.id} className="item-row">
-                        <span><b>{x.pregunta}</b><br /><small style={{ color: "var(--muted)" }}>{x.pasos.length} pasos{x.aviso_seguridad ? " · con aviso de seguridad" : ""}</small></span>
+                        <span><b>{x.pregunta}</b><small className="srv-sub">{x.pasos.length} pasos{x.aviso_seguridad ? " · con aviso de seguridad" : ""}</small></span>
                         <Borrar tabla="faqs" id={x.id} que={x.pregunta} />
                       </div>
                     ))}
@@ -106,7 +104,7 @@ export default async function Contenido() {
                   </div>
                 </div>
 
-                <aside className="stack" style={{ alignItems: "flex-start" }}>
+                <aside className="stack cnt-lado">
                   <p className="eyebrow">Código QR del equipo</p>
                   <img className="qr-img" src={qrs.get(eq.id)} alt={`QR de ${eq.nombre}`} />
                   <a className="btn small" href={qrs.get(eq.id)} download={`qr-${eq.slug}.png`}>Descargar QR</a>
@@ -128,8 +126,7 @@ export default async function Contenido() {
           );
         })}
 
-        <section className="card">
-          <h3>Agregar equipo</h3>
+        <Desplegable id="nuevo" titulo="Agregar tipo de equipo" detalle="Aparece en el catálogo del censo; publícalo para que las tiendas vean su guía.">
           <form action={crearEquipo} className="inline-form">
             <label className="field w2">Nombre<input name="nombre" required placeholder="Ej. Freidora" /></label>
             <label className="field">Categoría<input name="categoria" list="cats" placeholder="Ej. Refrigeración" /><datalist id="cats">{Array.from(new Set(equipos.filter((e) => e.vigente !== false).map((e) => e.categoria))).map((c) => <option key={c} value={c} />)}</datalist></label>
@@ -137,11 +134,11 @@ export default async function Contenido() {
               <select name="icono" defaultValue="general">{ICONOS.map((i) => <option key={i}>{i}</option>)}</select>
             </label>
             <label className="field">Orden<input name="orden" type="number" defaultValue={equipos.length + 1} /></label>
-            <label className="field">Prefijo del código<input name="prefijo" maxLength={4} placeholder="Ej. FRE" style={{ textTransform: "uppercase" }} /></label>
+            <label className="field">Prefijo del código<input name="prefijo" maxLength={4} placeholder="Ej. FRE" className="cnt-pref" /></label>
             <label className="field">Guía para tiendas<select name="publicado" defaultValue="false"><option value="false">No (solo censo)</option><option value="true">Sí, publicar</option></select></label>
             <button className="btn primary" type="submit">Agregar equipo</button>
           </form>
-        </section>
+        </Desplegable>
       </main>
     </>
   );

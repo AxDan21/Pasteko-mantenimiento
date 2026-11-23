@@ -1,4 +1,6 @@
 import CopiarTexto from "@/components/CopiarTexto";
+import { Estado } from "@/components/Insignias";
+import Kpi from "@/components/Kpi";
 import Seccion from "@/components/Seccion";
 import { vistasSucursales } from "@/lib/secciones";
 import { requireAdmin } from "@/lib/auth";
@@ -55,7 +57,6 @@ export default async function SucursalesPorZona({ searchParams }: { searchParams
   return (
     <main className="wrap">
       <Seccion
-        eyebrow="Panel de mantenimiento"
         titulo="Sucursales"
         sub="Ubicación, estado y pendientes de cada tienda; por zona, listo para la junta con su supervisor."
         vistas={vistasSucursales()}
@@ -65,7 +66,7 @@ export default async function SucursalesPorZona({ searchParams }: { searchParams
       <div className="zona-barra">
         <div>
           <h2 className="zona-tit">{zona}</h2>
-          <p className="sub" style={{ margin: 0 }}>Supervisor: <b>{supervisor}</b> · {tiendas.length} tienda{tiendas.length !== 1 ? "s" : ""}</p>
+          <p className="sub eqp-cab-s">Supervisor: <b>{supervisor}</b> · {tiendas.length} tienda{tiendas.length !== 1 ? "s" : ""}</p>
         </div>
         <form method="get" className="zona-sel">
           <select id="s-zona" name="zona" defaultValue={zona} aria-label="Zona">{zonas.map((z) => <option key={z}>{z}</option>)}</select>
@@ -73,29 +74,29 @@ export default async function SucursalesPorZona({ searchParams }: { searchParams
         </form>
       </div>
 
-      <div className="kpis">
-        <div className="kpi"><span className="eyebrow">Gasto de la zona</span><span className="v">{mxn(tot.gasto)}</span><span className="s">{nombreMes(mes)}</span></div>
-        <div className="kpi"><span className="eyebrow">Preventivos vencidos</span><span className="v" style={{ color: tot.venc ? "var(--bad)" : "var(--ok)" }}>{tot.venc}</span><span className="s">Por reprogramar</span></div>
-        <div className="kpi"><span className="eyebrow">Próximos 30 días</span><span className="v">{tot.pend - tot.venc}</span><span className="s">Preventivos programados</span></div>
-        <div className="kpi"><span className="eyebrow">Hojas del mes</span><span className="v">{tot.hojas}</span><span className="s">Servicios realizados</span></div>
+      <div className="rz-kpis srv-kpis">
+        <Kpi icono="dinero" tono="marca" titulo="Gasto de la zona" valor={mxn(tot.gasto)} detalle={nombreMes(mes)} />
+        <Kpi href={`/admin/preventivos?estado=Vencido&zona=${encodeURIComponent(zona)}`} icono="reloj" tono="bad" titulo="Preventivos vencidos" valor={tot.venc} alerta={tot.venc > 0} detalle={tot.venc ? "por reprogramar" : "Nada vencido"} />
+        <Kpi icono="preventivos" tono="info" titulo="Próximos 30 días" valor={tot.pend - tot.venc} detalle="preventivos programados" />
+        <Kpi icono="hojas" tono="ok" titulo="Hojas del mes" valor={tot.hojas} detalle="servicios realizados" />
       </div>
 
-      <div className="toolbar" style={{ justifyContent: "space-between", alignItems: "center" }}>
-        <h3 style={{ fontSize: 17 }}>Tiendas de la zona</h3>
+      <div className="prv-barra">
+        <h2 className="ref-h">Tiendas de la zona</h2>
         <CopiarTexto texto={texto} etiqueta="Copiar pendientes para la junta" />
       </div>
       <div className="tbl-wrap">
-        <table>
+        <table className="tbl-cards">
           <thead><tr><th>Tienda</th><th>Pendientes (30 días)</th><th className="r">Vencidos</th><th className="r">Hojas del mes</th><th className="r">Gasto del mes</th><th>Último servicio</th></tr></thead>
           <tbody>
             {filas.map((x) => (
               <tr key={x.t.id}>
-                <td><b>{x.t.nombre}</b>{x.t.lat != null && x.t.lng != null && <><br /><a className="llegar" href={enlaceComoLlegar({ lat: x.t.lat, lng: x.t.lng })} target="_blank" rel="noopener noreferrer">Cómo llegar ↗</a></>}</td>
-                <td>{x.pend.length ? x.pend.map((p) => <small key={p.id} style={{ display: "block" }}>{fCorta(p.fecha)} · {p.tarea}</small>) : <small style={{ color: "var(--muted)" }}>Sin pendientes</small>}</td>
-                <td className="r"><span className={`pill ${x.venc.length ? "bad" : "ok"}`}>{x.venc.length}</span></td>
-                <td className="r num">{x.delMes}</td>
-                <td className="r num">{mxn(x.gasto)}</td>
-                <td>{x.ultima ? <><span className="num">{fCorta(x.ultima.creada)}</span><br /><small style={{ color: "var(--muted)" }}>{x.ultima.equipo}</small></> : "—"}</td>
+                <td data-label="Tienda"><b>{x.t.nombre}</b>{x.t.lat != null && x.t.lng != null && <a className="llegar srv-sub" href={enlaceComoLlegar({ lat: x.t.lat, lng: x.t.lng })} target="_blank" rel="noopener noreferrer">Cómo llegar ↗</a>}</td>
+                <td data-label="Pendientes (30 días)">{x.pend.length ? x.pend.map((p) => <small key={p.id} className="srv-sub zona-pend">{fCorta(p.fecha)} · {p.tarea}</small>) : <small className="srv-sub">Sin pendientes</small>}</td>
+                <td data-label="Vencidos" className="r"><Estado tono={x.venc.length ? "bad" : "ok"}>{x.venc.length}</Estado></td>
+                <td data-label="Hojas del mes" className="r num">{x.delMes}</td>
+                <td data-label="Gasto del mes" className="r num">{mxn(x.gasto)}</td>
+                <td data-label="Último servicio">{x.ultima ? <><span className="num">{fCorta(x.ultima.creada)}</span><small className="srv-sub">{x.ultima.equipo}</small></> : "—"}</td>
               </tr>
             ))}
           </tbody>

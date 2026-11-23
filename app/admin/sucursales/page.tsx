@@ -57,7 +57,6 @@ export default async function Sucursales() {
   return (
     <main className="wrap mapa-page">
       <Seccion
-        eyebrow="Panel de mantenimiento"
         titulo="Sucursales"
         sub={`${pins.length} de ${todas.length} sucursales en el mapa · ${tecnicos.length} técnico${tecnicos.length !== 1 ? "s" : ""} con base`}
         vistas={vistasSucursales()}
@@ -65,7 +64,7 @@ export default async function Sucursales() {
       />
 
       {sinUbicacion.length > 0 && (
-        <div className="note warn" style={{ marginBottom: 14 }}>
+        <div className="note warn eqp-nota">
           Faltan {sinUbicacion.length} sucursal{sinUbicacion.length !== 1 ? "es" : ""} sin ubicación: {sinUbicacion.slice(0, 6).map((x) => x.nombre).join(", ")}{sinUbicacion.length > 6 ? "…" : ""}. Agrega su latitud y longitud en la tabla <code>sucursales</code> de Supabase.
         </div>
       )}
@@ -73,9 +72,9 @@ export default async function Sucursales() {
       {pins.length ? (
         <MapaSucursales sucursales={pins} tecnicos={tecnicos} />
       ) : (
-        <div className="card">
-          <h3>Todavía no hay sucursales con ubicación</h3>
-          <p className="sub">Agrega la latitud y longitud de tus tiendas (tabla <code>sucursales</code>) y la base de tus técnicos (tabla <code>perfiles</code>: <code>base_lat</code>, <code>base_lng</code>) en Supabase; aparecerán aquí al instante.</p>
+        <div className="ui-vacio">
+          <b>Todavía no hay sucursales con ubicación</b>
+          <p>Agrega la latitud y longitud de tus tiendas (tabla <code>sucursales</code>) y la base de tus técnicos (tabla <code>perfiles</code>: <code>base_lat</code>, <code>base_lng</code>) en Supabase; aparecerán aquí al instante.</p>
         </div>
       )}
     </main>

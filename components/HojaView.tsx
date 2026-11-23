@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fecha, folio, mxn } from "@/lib/format";
 import type { Hoja } from "@/lib/types";
 import BotonImprimir from "@/components/BotonImprimir";
+import { Estado } from "@/components/Insignias";
 
 /** Hoja de servicio lista para ver en pantalla o imprimir / guardar como PDF. */
 export default async function HojaView({ hoja }: { hoja: Hoja }) {
@@ -25,8 +26,8 @@ export default async function HojaView({ hoja }: { hoja: Hoja }) {
           <p className="sub" style={{ margin: 0 }}>{fecha(hoja.creada)}</p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-          <span className={`pill ${hoja.tipo === "Preventivo" ? "neutral" : "warn"}`}>{hoja.tipo}</span>
-          <span className={`pill ${hoja.estado === "Revisada" ? "ok" : "neutral"}`}>{hoja.estado}</span>
+          <Estado tono={hoja.tipo === "Preventivo" ? "ok" : "warn"}>{hoja.tipo}</Estado>
+          <Estado tono={hoja.estado === "Revisada" ? "ok" : "warn"}>{hoja.estado}</Estado>
           <BotonImprimir />
         </div>
       </header>

@@ -1,5 +1,11 @@
 import Link from "next/link";
 import BotonIcono, { IconoAccion } from "@/components/BotonIcono";
+import BuscarEnLista from "@/components/BuscarEnLista";
+import Encabezado from "@/components/Encabezado";
+import { Anillo, BarrasH } from "@/components/Graficas";
+import IconoUI from "@/components/IconoUI";
+import { Estado } from "@/components/Insignias";
+import Kpi from "@/components/Kpi";
 import CopiarTexto from "@/components/CopiarTexto";
 import PaqueteFacturas, { type ArchivoFactura } from "@/components/PaqueteFacturas";
 import RegistroCfdi from "@/components/RegistroCfdi";
@@ -82,7 +88,6 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
   const facturas = new Map(((gm ?? []) as Pick<Gasto, "id" | "factura_path">[]).map((x) => [String(x.id), x.factura_path]));
   const urls = await enlaces(supabase, "facturas", Array.from(facturas.values()));
   const sucursales = (suc ?? []) as { id: number; nombre: string; zona: string }[];
-  const zonas = Array.from(new Set(sucursales.map((s) => s.zona)));
   const categorias = Array.from(new Set([...(eqs ?? []).map((e) => e.categoria as string), ...CATEGORIAS_EXTRA]));
 
   const hermanos = new Map<string, number>();
@@ -92,7 +97,6 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
   const porCat = new Map<string, number>();
   delMes.forEach((x) => porCat.set(x.categoria, (porCat.get(x.categoria) ?? 0) + Number(x.monto)));
   const cats = Array.from(porCat.entries()).sort((a, b) => b[1] - a[1]);
-  const maxCat = cats[0]?.[1] ?? 1;
   const restante = ajustes.presupuesto_mensual - total;
 
   // Pendientes de pago (todos los meses)
@@ -116,24 +120,34 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
       (x.partes ? x.partes.map((p) => `\n    · ${p.categoria}: ${p.concepto.split(" · ")[0]} ${mxn(Number(p.monto))}`).join("") : "")).join("\n");
   const seleccion = f.sel ? delMes.find((x) => `${x.origen}:${x.ref}` === f.sel) ?? null : null;
   const volver = `/admin/gastos?mes=${mes}${f.zona ? `&zona=${encodeURIComponent(f.zona)}` : ""}${f.pago ? `&pago=${f.pago}` : ""}`;
+  const conPago = (pago: string) => `/admin/gastos?${new URLSearchParams({ mes, ...(f.zona ? { zona: f.zona } : {}), ...(pago ? { pago } : {}) })}#lista`;
+  const mas30 = pendientes.filter((x) => diasEntre(x.fecha, h) > 30).reduce((s, x) => s + Number(x.monto), 0);
 
   const okMsg = f.ok === "1" ? "Gasto registrado." : f.ok?.startsWith("partidas-") ? `Factura registrada como ${f.ok.slice(9)} gastos, uno por concepto.` : f.ok === "pendiente" ? "Concepto regresado a pendiente de pago." : f.ok?.startsWith("pagados-") ? `${f.ok.slice(8)} concepto(s) marcados como pagados.` : f.ok?.startsWith("pasadas-") ? `${f.ok.slice(8)} concepto(s) pasados a pago. Sus PDF y XML se borraron.` : f.ok === "regresadas" ? "Regresadas a «por pasar a pago»." : null;
 
   return (
-    <main className="wrap">
-      <div className="head-row">
-        <div>
-          <p className="eyebrow">Panel de mantenimiento · {nombreMes(mes)}</p>
-          <h1 className="page-h">Gastos</h1>
-        </div>
-        <Link className="btn" href={`/admin/exportar?tabla=gastos&mes=${mes}`}>Descargar CSV del mes</Link>
+    <main className="wrap gst">
+      <Encabezado
+        titulo="Gastos"
+        sub={`${nombreMes(mes)}${f.zona ? ` · ${f.zona}` : ""}: hojas de servicio de proveedores, gastos con factura y caja chica. El mes y la zona se cambian en la barra superior.`}
+        acciones={<Link className="btn" href={`/admin/exportar?tabla=gastos&mes=${mes}`}>Descargar CSV del mes</Link>}
+      />
+
+      {okMsg && <div className="note ok eqp-nota" role="status">{okMsg}</div>}
+      {f.error && <div className="note bad eqp-nota" role="alert">{f.error}</div>}
+
+      <div className="rz-kpis srv-kpis">
+        <Kpi icono="dinero" tono="marca" titulo="Realizado del mes" valor={mxn(total)} detalle={`pagado ${mxn(total - pendMes)} · pendiente ${mxn(pendMes)}`} />
+        <Kpi icono="meta" tono={restante < 0 ? "bad" : "ok"} titulo="Presupuesto" valor={mxn(restante)} alerta={restante < 0}
+          detalle={`${restante < 0 ? "excedido" : "disponible"} de ${mxn(ajustes.presupuesto_mensual)}`}
+          grafica={<Anillo pct={(total / (ajustes.presupuesto_mensual || 1)) * 100} color={restante < 0 ? "var(--bad)" : "var(--chart-1)"} tam={56} grosor={7}><b className="num">{Math.round((total / (ajustes.presupuesto_mensual || 1)) * 100)}%</b></Anillo>} />
+        <Kpi href="#pendientes" icono="pago" tono="warn" titulo="Pendiente de pago" valor={mxn(totalPend)}
+          detalle={`${pendientes.length} pago${pendientes.length !== 1 ? "s" : ""} · todos los meses`} />
+        <Kpi href="#pendientes" icono="reloj" tono="bad" titulo="Con más de 30 días" valor={mxn(mas30)} alerta={mas30 > 0} detalle="priorizar con dirección" />
       </div>
 
-      {okMsg && <div className="note ok" style={{ marginBottom: 14 }}>{okMsg}</div>}
-      {f.error && <div className="note bad" style={{ marginBottom: 14 }}>{f.error}</div>}
-
-      <div className="panel-grid" style={{ marginBottom: 16 }}>
-        <section className="card" id="nuevo" style={{ scrollMarginTop: 80 }}>
+      <div className="panel-grid gst-alta">
+        <section className="card" id="nuevo">
           <h3>Registrar gasto</h3>
           <p className="sub">Con el XML de la factura. Las hojas de servicio y la caja chica se suman solas.</p>
           <RegistroCfdi
@@ -146,53 +160,60 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
             historial={(hist ?? []) as { concepto: string; categoria: string }[]}
           />
         </section>
-        <section className="card">
+        <section className="card gst-pres">
           <h3>Presupuesto de {nombreMes(mes)}</h3>
           <p className="sub">Realizado {mxn(total)} de {mxn(ajustes.presupuesto_mensual)}</p>
-          <div className="kpi" style={{ border: 0, padding: 0 }}>
-            <span className="v" style={{ color: restante < 0 ? "var(--bad)" : "var(--ink)" }}>{mxn(restante)}</span>
-            <div className="bar" style={{ display: "flex" }}>
-              <i className={restante < 0 ? "bad" : ""} style={{ width: `${Math.min(((total - pendMes) / (ajustes.presupuesto_mensual || 1)) * 100, 100)}%`, borderRadius: 0 }} />
-              <i className="warn" style={{ width: `${Math.min((pendMes / (ajustes.presupuesto_mensual || 1)) * 100, 100)}%`, borderRadius: 0 }} />
-            </div>
-            <span className="s">{restante < 0 ? "Excedido" : "Disponible"} · pagado {mxn(total - pendMes)} · pendiente de pago {mxn(pendMes)}</span>
+          <div className="gst-barra" role="img" aria-label={`Pagado ${mxn(total - pendMes)}, pendiente de pago ${mxn(pendMes)}, presupuesto ${mxn(ajustes.presupuesto_mensual)}`}>
+            <i className={restante < 0 ? "bad" : "ok"} style={{ width: `${Math.min(((total - pendMes) / (ajustes.presupuesto_mensual || 1)) * 100, 100)}%` }} />
+            <i className="warn" style={{ width: `${Math.min((pendMes / (ajustes.presupuesto_mensual || 1)) * 100, 100)}%` }} />
           </div>
-          <form action={guardarAjustes} className="inline-form" style={{ gridTemplateColumns: "1fr 1fr", marginTop: 16 }}>
-            <label className="field">Presupuesto mensual<input id="a-pres" name="presupuesto_mensual" type="number" min="0" step="100" defaultValue={ajustes.presupuesto_mensual} /></label>
-            <label className="field">Fondo de caja chica<input id="a-caja" name="fondo_caja_chica" type="number" min="0" step="100" defaultValue={ajustes.fondo_caja_chica} /></label>
-            <button className="btn" type="submit">Guardar montos</button>
-          </form>
+          <div className="legend">
+            <span><i className="gst-ley ok" />Pagado {mxn(total - pendMes)}</span>
+            <span><i className="gst-ley warn" />Pendiente {mxn(pendMes)}</span>
+            <span><i className="gst-ley libre" />{restante < 0 ? `Excedido ${mxn(-restante)}` : `Disponible ${mxn(restante)}`}</span>
+          </div>
+          <details className="gst-montos">
+            <summary>Cambiar presupuesto y fondo de caja chica</summary>
+            <form action={guardarAjustes} className="gst-montos-f">
+              <label className="field">Presupuesto mensual<input name="presupuesto_mensual" type="number" min="0" step="100" defaultValue={ajustes.presupuesto_mensual} /></label>
+              <label className="field">Fondo de caja chica<input name="fondo_caja_chica" type="number" min="0" step="100" defaultValue={ajustes.fondo_caja_chica} /></label>
+              <button className="btn" type="submit">Guardar montos</button>
+            </form>
+          </details>
         </section>
       </div>
 
       {/* ---------- Realizado pendiente de pago ---------- */}
-      <section className="card pend-card" id="pendientes" style={{ marginBottom: 16 }}>
-        <div className="head-row" style={{ marginBottom: 12 }}>
+      <section className="card pend-card gst-pend" id="pendientes">
+        <div className="gst-pend-h">
           <div>
             <p className="eyebrow">Para dirección</p>
-            <h3 style={{ fontSize: 22 }}>Realizado pendiente de pago</h3>
-            <p className="sub" style={{ margin: 0 }}>Trabajos y compras ya hechos que todavía no se pagan, de todos los meses.</p>
+            <h2 className="ref-h">Realizado pendiente de pago</h2>
+            <p className="sub eqp-cab-s">Trabajos y compras ya hechos que todavía no se pagan, de todos los meses.</p>
           </div>
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <div className="secc-acc">
             <CopiarTexto texto={pendientes.length ? texto : ""} etiqueta="Copiar resumen para dirección" />
             <Link className="btn" href="/admin/exportar?tabla=pendientes">Descargar CSV</Link>
           </div>
         </div>
 
-        <div className="kpis pend-kpis" style={{ marginBottom: 14 }}>
-          <div className="kpi"><span className="eyebrow">Total pendiente</span><span className="v" style={{ color: totalPend ? "var(--warn)" : "var(--ok)" }}>{mxn(totalPend)}</span><span className="s">{pendientes.length} pago{pendientes.length !== 1 ? "s" : ""} por hacer · el más antiguo de {masAntiguo} días</span></div>
-          <div className="kpi"><span className="eyebrow">1 · Por pasar a pago</span><span className="v">{mxn(suma(porPasar))}</span><span className="s">{porPasar.length} por entregar a Tesorería</span></div>
-          <div className="kpi"><span className="eyebrow">2 · En trámite</span><span className="v">{mxn(suma(enTramite))}</span><span className="s">{enTramite.length ? `${enTramite.length} esperando · la más antigua desde ${fCorta(enTramite[0].solicitado_pago!)}` : "Nada en trámite"}</span></div>
-          <div className="kpi"><span className="eyebrow">Con más de 30 días</span><span className="v" style={{ color: pendientes.some((x) => diasEntre(x.fecha, h) > 30) ? "var(--bad)" : undefined }}>{mxn(pendientes.filter((x) => diasEntre(x.fecha, h) > 30).reduce((s, x) => s + Number(x.monto), 0))}</span><span className="s">Priorizar con dirección</span></div>
-          <div className="kpi"><span className="eyebrow">Por proveedor / técnico</span>
-            <span className="s" style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 4 }}>
-              {benef.slice(0, 3).map(([b, e]) => <span key={b} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}><span>{b}</span><b className="num" style={{ color: "var(--ink)" }}>{mxn(e.monto)}</b></span>)}
-              {!benef.length && "—"}
-            </span>
+        {pendientes.length > 0 && (
+          <div className="gst-flujo">
+            <div className="gst-flujo-pasos">
+              <div className="gst-paso"><span className="gst-paso-n">1</span><span><small>Por pasar a pago</small><b className="num">{mxn(suma(porPasar))}</b><small>{porPasar.length} por entregar a Tesorería</small></span></div>
+              <IconoUI nombre="derecha" tam={18} grosor={2} className="gst-flecha" />
+              <div className="gst-paso"><span className="gst-paso-n">2</span><span><small>En trámite</small><b className="num">{mxn(suma(enTramite))}</b><small>{enTramite.length ? `${enTramite.length} esperando · desde ${fCorta(enTramite[0].solicitado_pago!)}` : "Nada en trámite"}</small></span></div>
+              <IconoUI nombre="derecha" tam={18} grosor={2} className="gst-flecha" />
+              <div className="gst-paso fin"><span className="gst-paso-n"><IconoUI nombre="check" tam={14} grosor={2.6} /></span><span><small>Total pendiente</small><b className="num">{mxn(totalPend)}</b><small>el más antiguo de {masAntiguo} días</small></span></div>
+            </div>
+            <div className="gst-benef">
+              <h3 className="rz-h4">Por proveedor o técnico</h3>
+              <BarrasH descripcion="Pendiente de pago por proveedor o técnico" datos={benef.slice(0, 5).map(([b, e], i) => ({ etiqueta: b, valor: e.monto, texto: mxn(e.monto), detalle: `${e.n} pago${e.n !== 1 ? "s" : ""}`, color: i === 0 ? "var(--warn)" : "var(--warn-soft)" }))} />
+            </div>
           </div>
-        </div>
+        )}
 
-        {!pendientes.length && <p className="sub">No hay trabajos pendientes de pago.</p>}
+        {!pendientes.length && <div className="ui-vacio"><b>Todo pagado</b><p>No hay trabajos ni compras pendientes de pago.</p></div>}
 
         {pendientes.length > 0 && (
         <details className="pend-det" open={!!f.ok?.match(/^(pasadas|regresadas|pagados|pendiente)/) || !!f.error}>
@@ -213,7 +234,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
               <input type="hidden" name="volver" value={volver} />
               <TablaPend lista={porPasar} hoy={h} archivosDe={archivosDe} />
               <div className="pay-bar">
-                <span className="sub" style={{ margin: 0 }}>Marca las que ya entregaste impresas y mandaste por correo. <b>Sus PDF y XML se borran</b>: descárgalos o imprímelos antes.</span>
+                <span className="sub tkp-nota">Marca las que ya entregaste impresas y mandaste por correo. <b>Sus PDF y XML se borran</b>: descárgalos o imprímelos antes.</span>
                 <label className="field">Fecha de entrega<input name="fecha_solicitud" type="date" defaultValue={h} /></label>
                 <button className="btn primary" type="submit">Pasar a pago las seleccionadas</button>
               </div>
@@ -231,7 +252,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
               <input type="hidden" name="volver" value={volver} />
               <TablaPend lista={enTramite} hoy={h} archivosDe={archivosDe} tramite />
               <div className="pay-bar">
-                <span className="sub" style={{ margin: 0 }}>Marca lo que Tesorería ya pagó (las facturas se pagan completas):</span>
+                <span className="sub tkp-nota">Marca lo que Tesorería ya pagó (las facturas se pagan completas):</span>
                 <label className="field">Fecha de pago<input id="p-fecha" name="fecha_pago" type="date" defaultValue={h} /></label>
                 <label className="field">Referencia<input id="p-ref" name="referencia_pago" placeholder="Transferencia, cheque…" /></label>
                 <button className="btn primary" type="submit">Marcar como pagadas</button>
@@ -244,45 +265,45 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
         )}
       </section>
 
-      <div className="panel-grid" style={{ marginBottom: 16 }}>
-        <section className="card">
-          <h3>Por categoría</h3>
-          <p className="sub">{nombreMes(mes)} · total {mxn(total)}</p>
-          {cats.length ? (
-            <div className="hbars">{cats.map(([c, n]) => <div key={c} className="hb"><span className="name">{c}</span><span className="track"><i style={{ width: `${(n / maxCat) * 100}%` }} /></span><span className="num">{mxn(n)}</span></div>)}</div>
-          ) : <p className="sub">Sin gastos en este mes.</p>}
-        </section>
-        <form className="card stack" method="get">
-          <h3>Ver otro mes</h3>
-          <label className="field">Mes<input id="f-mes" name="mes" type="month" defaultValue={mes} /></label>
-          <label className="field">Zona<select id="f-zona" name="zona" defaultValue={f.zona ?? ""}><option value="">Todas</option>{zonas.map((z) => <option key={z}>{z}</option>)}</select></label>
-          <label className="field">Estado de pago<select id="f-pago" name="pago" defaultValue={f.pago ?? ""}><option value="">Todos</option><option>Pagado</option><option>Pendiente</option></select></label>
-          <button className="btn primary" type="submit">Ver</button>
-        </form>
+      <section className="dcard rz-card gst-cat" aria-labelledby="gst-cat">
+        <header><div><h3 id="gst-cat">Por categoría</h3><p>{nombreMes(mes)} · total {mxn(total)}</p></div></header>
+        {cats.length ? (
+          <BarrasH descripcion={`Gasto por categoría en ${nombreMes(mes)}`} datos={cats.map(([c, n], i) => ({ etiqueta: c, valor: n, texto: mxn(n), color: i === 0 ? "var(--chart-1)" : "var(--brand-soft)" }))} />
+        ) : <p className="sub">Sin gastos en este mes.</p>}
+      </section>
+
+      <div className="prv-barra" id="lista">
+        <nav className="tkb-filtros" aria-label="Estado de pago">
+          {([["", "Todos"], ["Pendiente", "Pendientes"], ["Pagado", "Pagados"]] as const).map(([v, n]) => (
+            <Link key={v || "todos"} href={conPago(v)} aria-current={(f.pago ?? "") === v ? "page" : undefined}>{n}</Link>
+          ))}
+        </nav>
+        {filas.length > 0 && <BuscarEnLista key={f.pago ?? ""} objetivo="gst-filas" placeholder="Concepto, sucursal, proveedor o categoría" etiqueta="Buscar gastos" />}
       </div>
 
       {filas.length ? (
-        <div className={`lst${seleccion ? " con-panel" : ""}`} id="lista">
+        <div className={`lst${seleccion ? " con-panel" : ""}`}>
         <div className="tbl-wrap">
-          <table className="tbl-sel">
+          <table className="tbl-sel tbl-cards">
             <thead><tr><th>Fecha</th><th className="ocultable">Origen</th><th>Sucursal</th><th className="ocultable">Categoría</th><th>Concepto</th><th className="r">Monto</th><th className="ocultable">Pago</th><th className="ocultable" /></tr></thead>
-            <tbody>
+            <tbody id="gst-filas">
               {filas.map((x) => {
                 const [o, oc] = ORIGEN[x.origen] ?? ["", "neutral"];
                 const fac = x.origen === "gasto" ? facturas.get(x.ref) : null;
                 const nFac = x.factura_uuid ? hermanos.get(x.factura_uuid) ?? 1 : 1;
                 return (
-                  <tr key={x.origen + x.ref} aria-selected={f.sel === `${x.origen}:${x.ref}`}>
-                    <td className="num nw">{fCorta(x.fecha).replace(/ \d{2}$/, "")}</td>
-                    <td className="ocultable"><span className={`pill ${oc}`}>{o}</span></td>
-                    <td>{x.sucursal ?? <span style={{ color: "var(--muted)" }}>General</span>}</td>
-                    <td className="ocultable">{x.categoria}<br /><small style={{ color: "var(--muted)" }}>{x.tipo}</small></td>
-                    <td><Link href={`${volver}&sel=${x.origen}:${x.ref}#lista`} scroll={false} title="Ver detalle">{x.concepto}</Link>{x.beneficiario && x.origen !== "caja" && <><br /><small style={{ color: "var(--muted)" }}>{x.beneficiario}</small></>}{nFac > 1 && <><br /><span className="fac-tag" title="Se paga y se borra junto con los demás conceptos de la factura">{x.factura_ref} · {nFac} conceptos · total {mxn(Number(x.factura_total ?? 0))}</span></>}</td>
-                    <td className="r num">{mxn(Number(x.monto))}</td>
-                    <td className="ocultable">
+                  <tr key={x.origen + x.ref} aria-selected={f.sel === `${x.origen}:${x.ref}`}
+                    data-buscar={`${x.concepto} ${x.sucursal ?? "General"} ${x.zona ?? ""} ${x.categoria} ${x.tipo} ${x.beneficiario ?? ""} ${o} ${x.factura_ref ?? ""}`}>
+                    <td data-label="Fecha" className="num nw">{fCorta(x.fecha).replace(/ \d{2}$/, "")}</td>
+                    <td data-label="Origen" className="ocultable"><Estado tono={oc}>{o}</Estado></td>
+                    <td data-label="Sucursal">{x.sucursal ?? <span className="srv-sub">General</span>}</td>
+                    <td data-label="Categoría" className="ocultable">{x.categoria}<small className="srv-sub">{x.tipo}</small></td>
+                    <td data-label="Concepto"><Link href={`${volver}&sel=${x.origen}:${x.ref}#lista`} scroll={false} title="Ver detalle">{x.concepto}</Link>{x.beneficiario && x.origen !== "caja" && <small className="srv-sub">{x.beneficiario}</small>}{nFac > 1 && <span className="fac-tag" title="Se paga y se borra junto con los demás conceptos de la factura">{x.factura_ref} · {nFac} conceptos · total {mxn(Number(x.factura_total ?? 0))}</span>}</td>
+                    <td data-label="Monto" className="r num">{mxn(Number(x.monto))}</td>
+                    <td data-label="Pago" className="ocultable">
                       {x.pagado ? (
-                        <><span className="pill ok">Pagado</span>{x.fecha_pago && <><br /><small style={{ color: "var(--muted)" }}>{fCorta(x.fecha_pago)}{x.referencia_pago ? ` · ${x.referencia_pago}` : ""}</small></>}</>
-                      ) : <span className="pill warn">Pendiente</span>}
+                        <><Estado tono="ok">Pagado</Estado>{x.fecha_pago && <small className="srv-sub">{fCorta(x.fecha_pago)}{x.referencia_pago ? ` · ${x.referencia_pago}` : ""}</small>}</>
+                      ) : <Estado tono="warn">Pendiente</Estado>}
                     </td>
                     <td className="r ocultable">
                       <div className="iacts">
@@ -325,7 +346,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
         )}
         </div>
       ) : (
-        <div className="card"><h3>Sin gastos en {nombreMes(mes)}{f.pago ? ` con estado ${f.pago.toLowerCase()}` : ""}</h3><p className="sub">Registra el primero arriba o espera a que los técnicos envíen hojas con costo.</p></div>
+        <div className="ui-vacio"><b>Sin gastos en {nombreMes(mes)}{f.pago ? ` con estado ${f.pago.toLowerCase()}` : ""}</b><p>Registra el primero con «Registrar gasto» o espera a que los técnicos envíen hojas con costo.</p></div>
       )}
     </main>
   );
@@ -352,8 +373,8 @@ function TablaPend({ lista, hoy: h, archivosDe, tramite }: { lista: Fila[]; hoy:
               <tr key={x.origen + x.ref}>
                 <td><input type="checkbox" name="sel" value={`${x.origen}:${x.ref}`} aria-label={`Seleccionar ${x.concepto}`} className="sel-chk" /></td>
                 <td className="num nw">{fCorta(x.fecha).replace(/ \d{2}$/, "")}</td>
-                <td className="r"><span className={`pill ${d > 30 ? "bad" : d > 15 ? "warn" : "neutral"} num`}>{d}</span></td>
-                <td><span className={`pill ${oc}`}>{o}</span></td>
+                <td className="r"><Estado tono={d > 30 ? "bad" : d > 15 ? "warn" : "neutral"}>{d}</Estado></td>
+                <td><Estado tono={oc}>{o}</Estado></td>
                 <td>{x.sucursal ?? "General"}</td>
                 <td>
                   {x.origen === "hoja" ? <Link href={`/admin/hojas/${x.ref}`}>{x.concepto}</Link> : x.concepto}
@@ -364,7 +385,7 @@ function TablaPend({ lista, hoy: h, archivosDe, tramite }: { lista: Fila[]; hoy:
                   )}
                 </td>
                 <td>
-                  {x.beneficiario ?? <span style={{ color: "var(--muted)" }}>—</span>}
+                  {x.beneficiario ?? <span className="srv-sub">—</span>}
                   {(a.pdf || a.xml) && (
                     <span className="fac-files">
                       {a.pdf && <a href={a.pdf} target="_blank" rel="noopener noreferrer">PDF</a>}
@@ -393,13 +414,13 @@ function PanelGasto({ x, conceptos, factura, volver }: { x: GastoV; conceptos: G
       <header className="tkp-cab">
         <div className="tkp-cab-t">
           <div className="tkb-l1">
-            <span className={`pill ${oc}`}>{o}</span>
-            {x.pagado ? <span className="pill ok">Pagado</span> : x.solicitado_pago ? <span className="pill warn">En trámite</span> : <span className="pill warn">Pendiente</span>}
+            <Estado tono={oc}>{o}</Estado>
+            {x.pagado ? <Estado tono="ok">Pagado</Estado> : x.solicitado_pago ? <Estado tono="warn">En trámite</Estado> : <Estado tono="warn">Pendiente</Estado>}
           </div>
           <h2>{x.concepto}</h2>
           <p>{x.sucursal ?? "General"}{x.zona ? ` · ${x.zona}` : ""}</p>
         </div>
-        <Link href={`${volver}#lista`} className="tkp-x" scroll={false} aria-label="Cerrar detalle">×</Link>
+        <Link href={`${volver}#lista`} className="tkp-x" scroll={false} aria-label="Cerrar detalle"><IconoUI nombre="cerrar" tam={20} /></Link>
       </header>
 
       <div className="lp-gauge">
@@ -421,7 +442,7 @@ function PanelGasto({ x, conceptos, factura, volver }: { x: GastoV; conceptos: G
           <ul className="lp-lista">
             {conceptos.map((c) => <li key={c.ref}><span>{c.categoria} · {c.concepto.split(" · ")[0]}</span><b className="num">{mxn(Number(c.monto))}</b></li>)}
           </ul>
-          <p className="sub" style={{ margin: 0 }}>Se pagan y se borran juntos.</p>
+          <p className="sub tkp-nota">Se pagan y se borran juntos.</p>
         </section>
       )}
 
