@@ -7,7 +7,7 @@ import { diasEntre, fCorta, hoy } from "@/lib/panel";
 import { vistasEquipos } from "@/lib/secciones";
 import { createClient } from "@/lib/supabase/server";
 import type { Activo } from "@/lib/types";
-import { validarActivos } from "../../acciones-modulos";
+import { completarCensoSucursal, validarActivos } from "../../acciones-modulos";
 
 type Suc = { id: number; nombre: string; zona: string; supervisor: string | null; censo_completo: boolean; censo_fecha: string | null };
 type Est = "ok" | "proc" | "none";
@@ -106,6 +106,7 @@ export default async function AvanceCenso({ searchParams }: { searchParams: Prom
       />
 
       {f.ok?.startsWith("validados-") && <div className="note ok eqp-nota" role="status">{pl(Number(f.ok.slice(10)) || 0, "equipo validado", "equipos validados")}.</div>}
+      {f.ok === "completa" && <div className="note ok eqp-nota" role="status">Sucursal marcada como completa.</div>}
       {f.error && <div className="note bad eqp-nota" role="alert">{f.error}</div>}
 
       {/* ---------- Resumen ---------- */}
@@ -174,7 +175,7 @@ export default async function AvanceCenso({ searchParams }: { searchParams: Prom
                       <span className="cs-suc-t">
                         <Link href={`/admin/activos?suc=${s.id}`}><b>{s.nombre}</b></Link>
                         <small>
-                          {s.est === "ok" ? (s.censo_fecha ? `Completa · ${fCorta(s.censo_fecha)}` : "Completa") : s.est === "proc" ? "En proceso" : "Sin equipos registrados"}
+                          {s.est === "ok" ? (s.censo_fecha ? `Completa · ${fCorta(s.censo_fecha)}` : "Completa") : s.est === "proc" ? (s.pend ? "En proceso" : "Todo validado · falta marcarla completa") : "Sin equipos registrados"}
                           {z.supervisores.length > 1 && s.supervisor ? ` · ${s.supervisor}` : ""}
                         </small>
                       </span>
@@ -188,7 +189,16 @@ export default async function AvanceCenso({ searchParams }: { searchParams: Prom
                       </span>
                       <span className="cs-suc-acc">
                         {s.pend ? <Link className="btn small primary" href={`${qs({ f: filtro, suc: s.id })}#cola`}>Revisar {n(s.pend)}</Link>
-                          : s.val ? <Link className="btn small" href={`/admin/activos/etiquetas?sucursal=${s.id}`}>Imprimir QR</Link>
+                          : s.val ? <>
+                            {s.est === "proc" && (
+                              <form action={completarCensoSucursal}>
+                                <input type="hidden" name="sucursal_id" value={s.id} />
+                                <input type="hidden" name="volver" value={qs({ f: filtro })} />
+                                <button className="btn small primary" type="submit" title="Confirma que ya están registrados todos los equipos de la sucursal">Marcar completa</button>
+                              </form>
+                            )}
+                            <Link className="btn small" href={`/admin/activos/etiquetas?sucursal=${s.id}`}>Imprimir QR</Link>
+                          </>
                           : <Link className="btn small" href={`/censo/${s.id}`}>Ver censo</Link>}
                       </span>
                     </li>

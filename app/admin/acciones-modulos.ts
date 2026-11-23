@@ -278,6 +278,19 @@ export async function actualizarActivo(f: FormData) {
   redirect(`/admin/activos/${id}?ok=1`);
 }
 
+/** El administrador cierra el censo de una sucursal (lo mismo que "Ya registré todo" del supervisor). */
+export async function completarCensoSucursal(f: FormData) {
+  const supabase = await db();
+  const id = num(f, "sucursal_id");
+  const volver = txt(f, "volver").startsWith("/admin/activos/censo") ? txt(f, "volver") : "/admin/activos/censo";
+  const sep = volver.includes("?") ? "&" : "?";
+  const { error } = await supabase.rpc("marcar_censo", { p_sucursal: id, p_completo: true });
+  if (error) redirect(`${volver}${sep}error=${encodeURIComponent("No se pudo marcar completa: " + error.message)}`);
+  revalidatePath("/censo");
+  revalidatePath("/admin/activos/censo");
+  redirect(`${volver}${sep}ok=completa`);
+}
+
 /** Valida uno o varios equipos registrados por supervisores. */
 export async function validarActivos(f: FormData) {
   const { userId } = await requireAdmin();
