@@ -1,0 +1,563 @@
+<title>Censo de Equipos Pasteko</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:wght@600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: lienzo del panel (sin barra lateral para enfocarse en la vista) → avance agrupado por zona → cola de validación lista + revisión.
+   Tokens heredados de app/globals.css (identidad Pasteko). */
+:root {
+  --naranja: #ea5731; --amarillo: #fab428; --magenta: #d4005a; --verde: #46ad48; --turquesa: #00747a;
+  --bg: #f4f4f4; --surface: #ffffff; --surface-2: #ebebeb; --ink: #1d1d1b; --muted: #5b5b59; --line: #dcdcdb;
+  --orange: #ea5731; --on-orange: #1d1d1b; --brand: #b7492c; --brand-soft: #fce7e2;
+  --ok: #3a823a; --ok-bar: #46ad48; --ok-soft: #e3f3e4; --warn: #8c6922; --warn-bar: #fab428; --warn-soft: #fef0d4; --bad: #b5004d; --bad-soft: #fae0eb;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  --r: 12px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1d1d1b; --surface: #262624; --surface-2: #30302e; --ink: #f4f4f4; --muted: #a3a3a2; --line: #3a3a38;
+  --brand: #fab428; --brand-soft: #46291f; --ok: #6cc06d; --ok-soft: #253a24; --warn: #fab428; --warn-soft: #493b1e; --bad: #e5669c; --bad-soft: #421728;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #1d1d1b; --surface: #262624; --surface-2: #30302e; --ink: #f4f4f4; --muted: #a3a3a2; --line: #3a3a38;
+  --brand: #fab428; --brand-soft: #46291f; --ok: #6cc06d; --ok-soft: #253a24; --warn: #fab428; --warn-soft: #493b1e; --bad: #e5669c; --bad-soft: #421728;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; margin: 0; }
+h1, h2, h3, h4 { font-family: var(--f-display); margin: 0; line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; border-radius: 6px; }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+.band { background: var(--amarillo); color: #1d1d1b; font-size: 13px; font-weight: 700; padding-block: 6px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 10px; flex-wrap: wrap; justify-content: space-between; align-items: center; }
+.band nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.band a { text-decoration: none; padding: 3px 10px; border-radius: 999px; background: rgba(29,29,27,.08); }
+.band a[aria-current="page"] { background: #1d1d1b; color: #fab428; }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 22px 120px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 20px; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: 0 0 4px; }
+.sub { color: var(--muted); font-size: 14px; margin: 4px 0 0; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 14px; text-decoration: none; color: var(--ink); white-space: nowrap; }
+.btn:hover { border-color: var(--orange); }
+.btn.primary { background: var(--orange); border-color: var(--orange); color: var(--on-orange); }
+.btn.sm { padding: 5px 10px; font-size: 13px; }
+.btn.ghost { background: transparent; border-color: transparent; }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.neutral { background: var(--surface-2); color: var(--muted); } .pill.bad { background: var(--bad-soft); color: var(--bad); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); min-width: 0; }
+
+/* Encabezado de módulo */
+.head h1 { font-size: clamp(26px, 3.4vw, 34px); font-weight: 800; }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin-top: 14px; overflow-x: auto; }
+.tabs span { padding: 10px 14px 11px; font-weight: 700; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap; display: inline-flex; gap: 8px; align-items: center; }
+.tabs span.on { color: var(--ink); border-bottom-color: var(--orange); }
+.tabs i { font-style: normal; font-size: 12px; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; background: var(--bad); color: var(--surface); display: inline-grid; place-items: center; }
+
+/* Resumen del censo: una sola barra que cuenta la historia */
+.resumen { padding: 18px 20px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 24px; align-items: center; }
+.resumen h2 { font-size: 20px; }
+.stack-bar { grid-column: 1 / -1; display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--surface-2); }
+.stack-bar i { display: block; height: 100%; }
+.c-ok { background: var(--ok-bar); } .c-proc { background: var(--warn-bar); } .c-none { background: var(--line); }
+.leyenda { grid-column: 1 / -1; display: flex; gap: 18px; flex-wrap: wrap; font-size: 14px; }
+.leyenda span { display: inline-flex; align-items: center; gap: 7px; }
+.leyenda i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.leyenda b { font-family: var(--f-mono); }
+.resumen .cta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
+.resumen .cta b { font-family: var(--f-display); font-size: 28px; color: var(--warn); line-height: 1; }
+
+/* Avance por zona */
+.sec-h { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.sec-h h2 { font-size: 22px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 700; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.zonas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.zona > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; align-items: center; }
+.zona > summary::-webkit-details-marker { display: none; }
+.zona h3 { font-size: 17px; }
+.zona .meta { font-size: 13px; color: var(--muted); }
+.zona .z-n { text-align: right; font-size: 13px; color: var(--muted); }
+.zona .z-n b { font-family: var(--f-display); font-size: 20px; color: var(--ink); }
+.zona .mini { grid-column: 1 / -1; display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface-2); }
+.zona .mini i { display: block; height: 100%; }
+.zona .chev { transition: transform .15s; }
+.zona[open] .chev { transform: rotate(180deg); }
+.sucs { list-style: none; margin: 0; padding: 0 8px 8px; }
+.suc { display: grid; grid-template-columns: 10px minmax(0, 1fr) 150px auto; gap: 12px; align-items: center; padding: 10px 8px; border-top: 1px solid var(--line); }
+.suc .dot { width: 10px; height: 10px; border-radius: 50%; }
+.suc b { display: block; font-size: 15px; }
+.suc small { display: block; color: var(--muted); font-size: 12px; }
+.suc .sbar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--surface-2); }
+.suc .sbar i { display: block; height: 100%; }
+.suc .sn { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.zonas-vacio { grid-column: 1 / -1; padding: 24px; display: flex; flex-direction: column; gap: 4px; }
+.zonas-vacio span { color: var(--muted); font-size: 14px; max-width: 60ch; }
+.suc .acc { display: flex; gap: 6px; justify-content: flex-end; }
+.suc.oculta { display: none; }
+
+/* Cola de validación: maestro (sucursales) + cola de esa sucursal + revisión */
+.cola { display: grid; grid-template-columns: 250px minmax(0, 1fr) minmax(0, 340px); gap: 0; overflow: hidden; }
+.cola-suc { border-right: 1px solid var(--line); padding: 10px; display: flex; flex-direction: column; gap: 2px; max-height: 620px; overflow-y: auto; }
+.cola-suc .t { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 6px 8px; }
+.cola-suc button { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 8px; text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: 8px; }
+.cola-suc button small { grid-column: 1; color: var(--muted); font-size: 12px; }
+.cola-suc button .n { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-family: var(--f-mono); font-size: 12px; font-weight: 600; min-width: 26px; height: 22px; border-radius: 999px; display: grid; place-items: center; background: var(--warn-soft); color: var(--warn); }
+.cola-suc button:hover { background: var(--surface-2); }
+.cola-suc button[aria-current="true"] { background: var(--brand-soft); }
+.cola-main { min-width: 0; display: flex; flex-direction: column; }
+.cola-h { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cola-h h3 { font-size: 19px; }
+.cola-h p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.items { list-style: none; margin: 0; padding: 0; overflow-y: auto; max-height: 520px; }
+.item { display: grid; grid-template-columns: 22px 52px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 16px; border-top: 1px solid var(--line); cursor: pointer; }
+.item:first-child { border-top: 0; }
+.item:hover { background: var(--surface-2); }
+.item[aria-current="true"] { background: var(--brand-soft); }
+.item input { width: 18px; height: 18px; accent-color: var(--orange); }
+.thumb { width: 52px; height: 52px; border-radius: 8px; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; font-size: 10px; color: var(--muted); }
+.thumb svg { width: 100%; height: 100%; display: block; }
+.item b { display: block; font-size: 15px; }
+.item small { display: block; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item small.serie-l { white-space: normal; overflow-wrap: anywhere; }
+.item .flag { font-size: 12px; }
+.rev { border-left: 1px solid var(--line); padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.rev .big { border-radius: 10px; overflow: hidden; background: var(--surface-2); aspect-ratio: 4 / 3; max-width: 100%; }
+.rev .big svg { width: 100%; height: 100%; display: block; }
+.rev .fotos { display: flex; gap: 6px; }
+.rev .fotos button { border: 2px solid transparent; padding: 0; border-radius: 8px; overflow: hidden; width: 56px; height: 42px; background: var(--surface-2); font-size: 11px; color: var(--muted); }
+.rev .fotos button[aria-pressed="true"] { border-color: var(--orange); }
+.rev .fotos svg { width: 100%; height: 100%; display: block; }
+.cmp { margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; font-size: 14px; }
+.cmp dt { color: var(--muted); } .cmp dd { margin: 0; font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.cmp .serie { background: var(--warn-soft); color: var(--warn); padding: 0 6px; border-radius: 4px; font-family: var(--f-mono); }
+.rev .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+.rev .hint { font-size: 13px; color: var(--muted); margin: 0; }
+
+.barra-sel { position: sticky; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 16px; border-top: 1px solid var(--line); background: var(--surface); }
+.barra-sel span { font-size: 14px; }
+.vacio { padding: 30px 16px; text-align: center; color: var(--ok); font-weight: 700; }
+
+/* Diagnóstico */
+.diag { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.diag .card { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.diag h3 { font-size: 16px; display: flex; gap: 8px; align-items: center; }
+.diag h3 .n { width: 24px; height: 24px; border-radius: 50%; background: var(--turquesa); color: #fff; font-family: var(--f-mono); font-size: 12px; display: grid; place-items: center; flex: none; }
+.diag p { margin: 0; font-size: 14px; color: var(--muted); }
+.diag p b { color: var(--ink); }
+.antes { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.antes table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.antes th, .antes td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.antes th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.antes .tw { overflow-x: auto; }
+.antes .vg { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.antes .vg div { border: 1px solid var(--line); border-radius: 8px; padding: 8px; display: grid; grid-template-columns: 40px 40px minmax(0, 1fr); gap: 6px; font-size: 11px; color: var(--muted); }
+.antes .vg i { background: var(--surface-2); border-radius: 6px; aspect-ratio: 1; }
+
+/* Selector de datos de prueba: herramienta, no parte del diseño */
+.datos { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 50; display: flex; gap: 2px; padding: 3px; background: #e4e4e4; border-radius: 10px; box-shadow: 0 4px 16px rgba(0,0,0,.2); font-family: system-ui, sans-serif; max-width: calc(100vw - 24px); overflow-x: auto; }
+.datos button { border: 0; background: transparent; color: #333; font: 600 12px/1 system-ui, sans-serif; padding: 7px 10px; border-radius: 7px; white-space: nowrap; }
+.datos button[aria-pressed="true"] { background: #fff; color: #111; box-shadow: 0 1px 2px rgba(0,0,0,.15); }
+
+@media (max-width: 1000px) {
+  .cola { grid-template-columns: 220px minmax(0, 1fr); }
+  .rev { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--line); }
+}
+@media (max-width: 760px) {
+  .zonas, .diag { grid-template-columns: minmax(0, 1fr); }
+  .resumen { grid-template-columns: minmax(0, 1fr); }
+  .resumen .cta { align-items: flex-start; text-align: left; }
+  .cola { grid-template-columns: minmax(0, 1fr); }
+  .cola-suc { border-right: 0; border-bottom: 1px solid var(--line); flex-direction: row; overflow-x: auto; max-height: none; }
+  .cola-suc .t { display: none; }
+  .cola-suc button { flex: none; border: 1px solid var(--line); max-width: 80vw; }
+  .cola-suc .cs-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cola-suc small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .suc { grid-template-columns: 10px minmax(0, 1fr) auto; }
+  .suc .prog { grid-column: 2 / -1; grid-row: 2; }
+}
+</style>
+
+<div class="band" role="note">
+  <span>Maqueta · datos de ejemplo</span>
+  <nav aria-label="Vistas de la maqueta"><a href="#demo">1 · Propuesta</a><a href="#diagnostico">2 · Diagnóstico</a></nav>
+</div>
+
+<main class="wrap" id="vista-propuesta">
+  <header class="head">
+    <p class="eyebrow">Inventario</p>
+    <h1>Equipos</h1>
+    <p class="sub">Los supervisores registran los equipos de sus sucursales. Aquí ves cuánto falta y validas lo que registraron.</p>
+    <div class="tabs" aria-hidden="true"><span>Inventario y garantías</span><span class="on">Censo <i id="tab-n">23</i></span><span>Etiquetas QR</span></div>
+  </header>
+
+  <section class="card resumen" aria-labelledby="r-t">
+    <div><h2 id="r-t">—</h2><p class="sub" id="r-sub">—</p></div>
+    <div class="cta"><span class="sub" style="margin:0">Por validar</span><b class="num" id="r-pend">23</b><a class="btn primary sm" href="#cola">Revisar ahora ↓</a></div>
+    <div class="stack-bar" role="img" id="r-bar"></div>
+    <div class="leyenda" id="r-ley"></div>
+  </section>
+
+  <section aria-labelledby="av-t" style="display:flex;flex-direction:column;gap:12px">
+    <div class="sec-h">
+      <div><h2 id="av-t">Avance por zona</h2><p class="sub">Primero las zonas con más pendiente. Cada barra: <span style="color:var(--ok);font-weight:700">validados</span> y <span style="color:var(--warn);font-weight:700">por validar</span>.</p></div>
+      <div class="chips" role="group" aria-label="Filtrar sucursales">
+        <button class="chip" aria-pressed="true" data-f="todas">Todas</button>
+        <button class="chip" aria-pressed="false" data-f="pend">Con pendientes</button>
+        <button class="chip" aria-pressed="false" data-f="none">Sin empezar</button>
+        <button class="chip" aria-pressed="false" data-f="ok">Completas</button>
+      </div>
+    </div>
+    <div class="zonas" id="zonas"></div>
+  </section>
+
+  <section class="card" id="cola" aria-labelledby="c-t" style="scroll-margin-top:16px">
+    <div class="cola">
+      <nav class="cola-suc" aria-label="Sucursales con equipos por validar" id="cola-suc"><span class="t">Por validar · por sucursal</span></nav>
+      <div class="cola-main">
+        <div class="cola-h">
+          <div><h3 id="c-t">—</h3><p id="c-sub">—</p></div>
+          <button class="btn sm" id="sel-todos" type="button">Seleccionar todos</button>
+        </div>
+        <ul class="items" id="items"></ul>
+        <div class="vacio" id="c-vacio" hidden>✓ Esta sucursal no tiene equipos por validar.</div>
+        <div class="barra-sel"><span id="sel-n">Ninguno seleccionado</span><button class="btn primary" id="validar" type="button" disabled>Validar seleccionados</button></div>
+      </div>
+      <aside class="rev" aria-label="Revisión del equipo" id="rev"></aside>
+    </div>
+  </section>
+</main>
+
+<div id="datos" class="datos" role="group" aria-label="Datos de prueba">
+  <button type="button" data-d="demo">Demo</button><button type="button" data-d="peor">Peor caso</button><button type="button" data-d="vacio">Vacío</button><button type="button" data-d="uno">Uno</button><button type="button" data-d="mil">1,000</button>
+</div>
+
+<main class="wrap" id="vista-diagnostico" hidden>
+  <header class="head"><p class="eyebrow">Diagnóstico · app/admin/activos/censo</p><h1>Por qué cuesta leer el censo hoy</h1><p class="sub">Lo que encontré en el código actual y cómo lo resuelve la propuesta.</p></header>
+
+  <section class="card antes" aria-label="Así se ve hoy">
+    <span class="pill bad" style="align-self:flex-start">Hoy</span>
+    <div class="tw"><table>
+      <thead><tr><th>Zona</th><th>Sucursal</th><th>Supervisor</th><th>Equipos</th><th>Por validar</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Zona 1 · Pachuca</td><td>24 Horas</td><td>Laura M.</td><td>12</td><td>3</td><td>En proceso</td><td>Ver · QR</td></tr>
+        <tr><td>Zona 1 · Pachuca</td><td>Palomas</td><td>Laura M.</td><td>9</td><td>0</td><td>Completa</td><td>Ver · QR</td></tr>
+        <tr><td>Zona 1 · Pachuca</td><td>San Antonio</td><td>Laura M.</td><td>0</td><td>0</td><td>Sin empezar</td><td>Ver</td></tr>
+        <tr><td>AICM y CDMX</td><td>BLVD Aeropuerto</td><td>Jorge R.</td><td>14</td><td>6</td><td>En proceso</td><td>Ver · QR</td></tr>
+        <tr><td colspan="7" style="color:var(--muted)">… una fila por cada sucursal, todas iguales</td></tr>
+      </tbody>
+    </table></div>
+    <div class="vg"><div><i></i><i></i><span>PK-HOR-002<br>Horno · BLVD Aeropuerto<br>Serie… Registró…</span></div><div><i></i><i></i><span>PK-CAF-004<br>Cafetera · 24 Horas<br>Serie… Registró…</span></div><div><i></i><i></i><span>PK-REF-003<br>Refresquero · Palomas<br>Serie… Registró…</span></div><div><i></i><i></i><span>… 20 tarjetas más, sucursales mezcladas</span></div></div>
+  </section>
+
+  <div class="diag">
+    <div class="card"><h3><span class="n">1</span>La tabla no muestra avance</h3><p>"Equipos: 12" no dice si falta mucho o poco. El estado es una palabra y no se compara entre sucursales. <b>Cambio:</b> una barra por sucursal (validados / por validar) y un resumen arriba que cuenta completas, en proceso y sin empezar.</p></div>
+    <div class="card"><h3><span class="n">2</span>La zona se repite en cada fila</h3><p>La zona es texto pequeño repetido y las sucursales no se agrupan. Para saber cómo va una zona hay que sumar a mano. <b>Cambio:</b> una tarjeta por zona con su supervisor, su barra y sus sucursales adentro; las zonas con más pendiente van primero y se pueden plegar.</p></div>
+    <div class="card"><h3><span class="n">3</span>Todo pesa lo mismo</h3><p>Una sucursal completa y una que tiene 6 equipos por validar se ven casi iguales. <b>Cambio:</b> filtros "Con pendientes", "Sin empezar" y "Completas", y un punto de color por estado. Las acciones dicen qué hacen ("Revisar 6", "Imprimir QR").</p></div>
+    <div class="card"><h3><span class="n">4</span>"Por validar" mezcla sucursales</h3><p>La cola es una cuadrícula de tarjetas de todas las sucursales; la sucursal es texto gris de 12 px. Con 20 o más tarjetas no sabes por dónde empezar. <b>Cambio:</b> primero eliges la sucursal (con su conteo) y ves solo sus equipos, con el nombre de la sucursal como título.</p></div>
+    <div class="card"><h3><span class="n">5</span>Las fotos son demasiado chicas para revisar</h3><p>La ficha técnica sale en 76 px; para comparar la serie hay que abrir otra pestaña. <b>Cambio:</b> panel de revisión con la ficha en grande y la serie registrada resaltada al lado, para comparar sin salir.</p></div>
+    <div class="card"><h3><span class="n">6</span>Validar es un paso suelto</h3><p>El botón "Validar seleccionados" está al final de la cuadrícula. <b>Cambio:</b> barra fija con el conteo ("3 de 6 seleccionados"), "Seleccionar todos" por sucursal y "Validar y seguir" desde el panel, que pasa al siguiente equipo.</p></div>
+  </div>
+</main>
+
+<script>
+(function () {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+  // ---------- Conjuntos de datos (demo, peor caso, vacío, uno, 1,000) ----------
+  const EQ = ["Horno de convección", "Cafetera BUNN", "Refresquero", "Máquina de hielos", "Frigobar", "Licuadora", "Cámara de conservación"];
+  const PREF = ["HOR", "CAF", "REF", "HIE", "FRI", "LIC", "CON"];
+  const MARCA = ["Gastromaq C10", "BUNN Crescendo", "Gelum VR08", "Scotsman", "Metalfrio", "Vitamix", "Torrey"];
+  function generar(zonas) {
+    const colas = {};
+    zonas.forEach((z, zi) => z.sucs.forEach((s, si) => {
+      if (!s.pend) return;
+      colas[s.n] = Array.from({ length: s.pend }, (_, i) => {
+        const k = (si * 3 + i + zi) % EQ.length;
+        return { id: `PK-${PREF[k]}-${String(10 + i + si * 7 + zi * 50).padStart(3, "0")}`, eq: EQ[k], marca: MARCA[k], serie: `${(7341 + i * 97 + si * 13) * 113}`.slice(0, 9), reg: z.sup, dias: i + 1, ficha: (i + si) % 4 !== 3, foto: i % 2 === 0 };
+      });
+    }));
+    return { zonas, colas };
+  }
+  function demo() {
+    return generar([
+      { zona: "AICM y CDMX", sup: "Jorge R.", sucs: [
+        { n: "BLVD Aeropuerto", est: "proc", val: 8, pend: 6 }, { n: "Narvarte", est: "proc", val: 5, pend: 4 }, { n: "Terminal 2", est: "none", val: 0, pend: 0 } ]},
+      { zona: "Zona 1 · Pachuca", sup: "Laura M.", sucs: [
+        { n: "24 Horas", est: "proc", val: 9, pend: 3 }, { n: "Palomas", est: "ok", val: 9, pend: 0, fecha: "12 nov" },
+        { n: "San Antonio", est: "none", val: 0, pend: 0 }, { n: "Benguirón", est: "ok", val: 11, pend: 0, fecha: "8 nov" } ]},
+      { zona: "AIFA", sup: "Ana P.", sucs: [
+        { n: "AIFA Entradas", est: "proc", val: 6, pend: 5 }, { n: "AIFA Salas", est: "ok", val: 10, pend: 0, fecha: "15 nov" } ]},
+      { zona: "Hidalgo y Puebla", sup: "Luis A.", sucs: [
+        { n: "La Nopalera", est: "proc", val: 7, pend: 3 }, { n: "El Arenal", est: "ok", val: 12, pend: 0, fecha: "3 nov" }, { n: "Visitación", est: "ok", val: 8, pend: 2, fecha: "19 nov" } ]},
+      { zona: "Edomex", sup: "Marco T.", sucs: [
+        { n: "Tecámac", est: "ok", val: 10, pend: 0, fecha: "1 nov" }, { n: "Ojo de Agua", est: "none", val: 0, pend: 0 } ]},
+    ]);
+  }
+  /** Lo que de verdad puede llegar: columnas `text` sin límite, campos opcionales vacíos, conteos de 1 y de 48. */
+  function peor() {
+    const d = generar([
+      { zona: "Zona 4 · Ciudad de México Norte y Estado de México Oriente", sup: "María Guadalupe Hernández de la Fuente", sucs: [
+        { n: "Terminal 1 AICM Sala Nacional Llegadas Puerta 7", est: "proc", val: 120, pend: 48 },
+        { n: "T2", est: "proc", val: 1, pend: 1 },
+        { n: "Plaza Satélite — Local 214-B (antes Plaza Universidad)", est: "ok", val: 1, pend: 0, fecha: null },
+        { n: "Ñuñoa Tlalnepantla", est: "proc", val: 0, pend: 0 },
+        { n: "Ojo de Agua", est: "none", val: 0, pend: 0 },
+        { n: "Coacalco", est: "ok", val: 14, pend: 0, fecha: "3 nov" },
+        { n: "Ecatepec Las Américas", est: "ok", val: 9, pend: 1, fecha: "19 nov" },
+      ]},
+      { zona: "AIFA", sup: null, sucs: [
+        { n: "AIFA Entradas", est: "none", val: 0, pend: 0 } ]},
+      { zona: "Hidalgo", sup: "Jo", sucs: [
+        { n: "Pachuca Centro Histórico Plaza Independencia", est: "proc", val: 3, pend: 1 },
+        { n: "Tula", est: "ok", val: 6, pend: 0, fecha: "12 nov" } ]},
+    ]);
+    // Los primeros renglones de la cola reparten los peores valores reales
+    const cola = d.colas["Terminal 1 AICM Sala Nacional Llegadas Puerta 7"];
+    cola[0] = { id: "PK-AICM-T1-CAMCONS-0012", eq: "Cámara de conservación de refrigeración de dos puertas", marca: "Torrey CRF-2P-1300-INOX-REV-B", serie: "SN2024081173459982MXINX000127", reg: "María Guadalupe Hernández de la Fuente", dias: 47, ficha: true, foto: true };
+    cola[1] = { id: "PK-HOR-001", eq: "Horno", marca: null, serie: null, reg: null, dias: 1, ficha: true, foto: false };
+    cola[2] = { id: "PK-HIE-014", eq: "Máquina de hielos", marca: "Hamilton Beach & \"Commercial\"", serie: "No legible (<5 dígitos visibles)", reg: "Jo", dias: 2, ficha: false, foto: false };
+    cola[3] = { id: "PK-LIC-003", eq: "Licuadora", marca: "Vitamix", serie: "1", reg: "Ana P.", dias: 0, ficha: true, foto: true };
+    d.colas["T2"][0] = { id: "PK-CAF-020", eq: "Cafetera BUNN", marca: "BUNN", serie: "78-2231", reg: "Jo", dias: 1, ficha: true, foto: true };
+    return d;
+  }
+  function uno() {
+    return generar([{ zona: "Zona 1 · Pachuca", sup: "Laura M.", sucs: [{ n: "24 Horas", est: "proc", val: 0, pend: 1 }] }]);
+  }
+  function vacio() { return { zonas: [], colas: {} }; }
+  function mil() {
+    const zonas = Array.from({ length: 8 }, (_, z) => ({ zona: `Zona ${z + 1}`, sup: `Supervisor ${z + 1}`, sucs: Array.from({ length: 5 }, (_, i) => ({ n: `Sucursal ${z * 5 + i + 1}`, est: "proc", val: 10, pend: 25 })) }));
+    return generar(zonas);
+  }
+  const CONJUNTOS = { demo, peor, vacio, uno, mil };
+  let ZONAS = [], colas = {};
+  function cargar(nombre) { const d = (CONJUNTOS[nombre] || demo)(); ZONAS = d.zonas; colas = d.colas; }
+
+  // ---------- Formato: números, plurales, fechas relativas y escape de texto ----------
+  const NUM = new Intl.NumberFormat("es-MX");
+  const fmt = (n) => NUM.format(n);
+  const pl = (n, uno, varios) => `${fmt(n)} ${n === 1 ? uno : varios}`;
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const FECHA = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short" });
+  /** Hoy, ayer, hace N días hasta una semana; después, la fecha. */
+  function cuando(dias) {
+    if (dias == null) return "Sin fecha";
+    if (dias <= 0) return "Hoy";
+    if (dias === 1) return "Ayer";
+    if (dias <= 7) return `Hace ${dias} días`;
+    return FECHA.format(new Date(Date.now() - dias * 864e5));
+  }
+
+  function pintarResumen() {
+    const sucs = ZONAS.flatMap((z) => z.sucs), n = sucs.length;
+    const c = { ok: 0, proc: 0, none: 0 }; sucs.forEach((s) => c[s.est]++);
+    const eq = sucs.reduce((a, s) => a + s.val + s.pend, 0), pend = sucs.reduce((a, s) => a + s.pend, 0);
+    const vacio = n === 0;
+    $("#r-t").textContent = vacio ? "Aún no hay sucursales en el censo" : `${fmt(c.ok)} de ${pl(n, "sucursal", "sucursales")} ${c.ok === 1 || n === 1 ? "tiene" : "tienen"} su censo completo`;
+    $("#r-sub").textContent = vacio
+      ? "Cuando los supervisores registren equipos, aquí verás el avance de cada sucursal."
+      : pl(eq, "equipo registrado", "equipos registrados") + (c.none ? ` · ${pl(c.none, "sucursal sin empezar", "sucursales sin empezar")}` : "");
+    $("#r-pend").textContent = fmt(pend);
+    $("#tab-n").textContent = fmt(pend); $("#tab-n").hidden = !pend;
+    $(".resumen .cta").hidden = !pend;
+    $("#r-bar").hidden = vacio; $("#r-ley").hidden = vacio;
+    if (!vacio) {
+      $("#r-bar").innerHTML = `<i class="c-ok" style="width:${(c.ok / n) * 100}%"></i><i class="c-proc" style="width:${(c.proc / n) * 100}%"></i><i class="c-none" style="width:${(c.none / n) * 100}%"></i>`;
+      $("#r-bar").setAttribute("aria-label", `${c.ok} completas, ${c.proc} en proceso, ${c.none} sin empezar`);
+      $("#r-ley").innerHTML = `<span><i class="c-ok"></i>Completas <b>${fmt(c.ok)}</b></span><span><i class="c-proc"></i>En proceso <b>${fmt(c.proc)}</b></span><span><i class="c-none"></i>Sin empezar <b>${fmt(c.none)}</b></span>`;
+    }
+    const cnt = { todas: n, pend: sucs.filter((s) => s.pend).length, none: c.none, ok: c.ok };
+    const nom = { todas: "Todas", pend: "Con pendientes", none: "Sin empezar", ok: "Completas" };
+    $$(".chip").forEach((b) => (b.textContent = `${nom[b.dataset.f]} · ${fmt(cnt[b.dataset.f])}`));
+    $(".chips").hidden = vacio;
+  }
+
+  // ---------- Avance por zona ----------
+  const COL = { ok: "var(--ok-bar)", proc: "var(--warn-bar)", none: "var(--line)" };
+  const EST = { ok: ["Completa", "ok"], proc: ["En proceso", "warn"], none: ["Sin empezar", "neutral"] };
+  const pendZona = (z) => z.sucs.reduce((a, s) => a + s.pend, 0);
+  function pintarZonas() {
+    if (!ZONAS.length) {
+      $("#zonas").innerHTML = `<div class="card zonas-vacio"><b>Sin zonas todavía</b><span>Da de alta las sucursales y asigna un supervisor a cada una. Cada zona aparecerá aquí con su avance.</span></div>`;
+      return;
+    }
+    const orden = [...ZONAS].sort((a, b) => pendZona(b) - pendZona(a));
+    $("#zonas").innerHTML = orden.map((z) => {
+      const comp = z.sucs.filter((s) => s.est === "ok").length, n = z.sucs.length;
+      const p = pendZona(z);
+      const mini = z.sucs.map((s) => `<i style="width:${100 / n}%;background:${COL[s.est]};border-right:2px solid var(--surface)"></i>`).join("");
+      const filas = z.sucs.map((s) => {
+        const tot = s.val + s.pend, [et] = EST[s.est];
+        const w = tot ? Math.max(18, Math.min(100, tot * 6)) : 0;
+        const meta = s.est === "ok" ? (s.fecha ? `Completa · ${esc(s.fecha)}` : "Completa")
+          : s.est === "none" ? "Sin equipos registrados"
+          : tot ? "En proceso" : "En proceso · sin equipos aún";
+        // La acción depende de lo que hay: revisar pendientes, imprimir QR de lo validado o pedir que empiecen.
+        const acc = s.pend ? `<button class="btn sm primary" data-revisar="${esc(s.n)}">Revisar ${fmt(s.pend)}</button>`
+          : s.val ? `<a class="btn sm" href="#zonas">Imprimir QR</a>`
+          : `<a class="btn sm" href="#zonas">Avisar al supervisor</a>`;
+        return `<li class="suc" data-est="${s.est}" data-pend="${s.pend ? 1 : 0}">
+          <span class="dot" style="background:${COL[s.est]}" title="${et}"></span>
+          <span><b>${esc(s.n)}</b><small>${meta}</small></span>
+          <span class="prog">${tot ? `<span class="sbar" style="width:${w}%"><i style="width:${(s.val / tot) * 100}%;background:var(--ok-bar)"></i><i style="width:${(s.pend / tot) * 100}%;background:var(--warn-bar)"></i></span><span class="sn">${fmt(s.val)} de ${fmt(tot)} ${tot === 1 ? "validado" : "validados"}</span>` : `<span class="sn">—</span>`}</span>
+          <span class="acc">${acc}</span>
+        </li>`;
+      }).join("");
+      return `<details class="card zona" open>
+        <summary>
+          <span><h3>${esc(z.zona)}</h3><span class="meta">${z.sup ? `Supervisor: ${esc(z.sup)}` : "Sin supervisor asignado"} · ${p ? `<b style="color:var(--warn)">${fmt(p)} por validar</b>` : "nada por validar"}</span></span>
+          <span class="z-n"><b class="num">${fmt(comp)}</b> de ${fmt(n)} ${n === 1 ? "completa" : "completas"} <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></span>
+          <span class="mini" aria-hidden="true">${mini}</span>
+        </summary>
+        <ul class="sucs">${filas}</ul>
+      </details>`;
+    }).join("");
+    $$("[data-revisar]").forEach((b) => b.addEventListener("click", () => { elegir(b.dataset.revisar); $("#cola").scrollIntoView({ behavior: "smooth" }); }));
+    filtrar(filtro);
+  }
+  let filtro = "todas";
+  function filtrar(f) {
+    filtro = f;
+    $$(".chip").forEach((c) => c.setAttribute("aria-pressed", c.dataset.f === f));
+    $$(".suc").forEach((li) => {
+      const ok = f === "todas" || (f === "pend" && li.dataset.pend === "1") || li.dataset.est === f;
+      li.classList.toggle("oculta", !ok);
+    });
+    $$(".zona").forEach((z) => (z.hidden = !z.querySelector(".suc:not(.oculta)")));
+  }
+  $$(".chip").forEach((c) => c.addEventListener("click", () => filtrar(c.dataset.f)));
+
+  // ---------- Cola de validación ----------
+  function ficha(x, grande) {
+    if (!x.ficha) return `<span>Sin ficha</span>`;
+    const fs = grande ? 1 : 1;
+    return `<svg viewBox="0 0 160 120" role="img" aria-label="Ficha técnica de ${x.id}">
+      <rect width="160" height="120" fill="#b9b9b6"/><rect x="14" y="14" width="132" height="92" rx="6" fill="#e9e7e1" stroke="#8d8b85" stroke-width="2"/>
+      <rect x="22" y="22" width="60" height="10" rx="2" fill="#3b3a36"/>
+      <text x="22" y="48" font-family="monospace" font-size="${7 * fs}" fill="#3b3a36">MODEL ${esc((x.marca || "—").split(" ").pop())}</text>
+      <text x="22" y="60" font-family="monospace" font-size="${7 * fs}" fill="#3b3a36">S/N ${esc(x.serie || "—")}</text>
+      <text x="22" y="72" font-family="monospace" font-size="${7 * fs}" fill="#3b3a36">120V 60Hz 12A</text>
+      <rect x="22" y="82" width="40" height="16" fill="none" stroke="#3b3a36"/><text x="26" y="93" font-family="monospace" font-size="7" fill="#3b3a36">CE  UL</text>
+      <circle cx="128" cy="30" r="5" fill="#8d8b85"/><circle cx="128" cy="92" r="5" fill="#8d8b85"/>
+    </svg>`;
+  }
+  function fotoEq(x) {
+    return `<svg viewBox="0 0 160 120" role="img" aria-label="Foto del equipo ${x.id}"><rect width="160" height="120" fill="#6f6d68"/><rect x="40" y="18" width="80" height="88" rx="6" fill="#c9c7c1"/><rect x="50" y="34" width="60" height="44" rx="3" fill="#2d2c29"/><circle cx="62" cy="92" r="4" fill="#ea5731"/><circle cx="76" cy="92" r="4" fill="#3b3a36"/></svg>`;
+  }
+  let actual = null, sel = new Set(), cursor = 0, verFoto = false;
+  function pintarSucs() {
+    const nav = $("#cola-suc");
+    nav.querySelectorAll("button").forEach((b) => b.remove());
+    let total = 0;
+    ZONAS.forEach((z) => z.sucs.forEach((s) => {
+      const n = (colas[s.n] || []).length; if (!n) return; total += n;
+      const b = document.createElement("button");
+      b.type = "button"; b.setAttribute("aria-current", s.n === actual);
+      b.title = s.n;
+      b.innerHTML = `<span class="cs-n"><b>${esc(s.n)}</b></span><small>${esc(z.zona)}</small><span class="n">${fmt(n)}</span>`;
+      b.addEventListener("click", () => elegir(s.n));
+      nav.appendChild(b);
+    }));
+    $("#r-pend").textContent = fmt(total);
+  }
+  const registro = (r) => r || "un usuario eliminado";
+  function elegir(n) { actual = n; sel = new Set(); cursor = 0; verFoto = false; pintarSucs(); pintarCola(); }
+  function pintarCola() {
+    const lista = colas[actual] || [];
+    const z = ZONAS.find((z) => z.sucs.some((s) => s.n === actual));
+    // Sin sucursal elegida (no hay nada por validar): se limpia todo en lugar de dejar lo anterior en pantalla.
+    if (!z) {
+      $("#c-t").textContent = "Nada por validar";
+      $("#c-sub").textContent = ZONAS.length ? "Todos los equipos registrados ya están validados." : "Cuando un supervisor registre equipos, aparecerán aquí por sucursal.";
+      $("#items").innerHTML = ""; $("#items").hidden = true; $("#c-vacio").hidden = true;
+      $("#sel-todos").hidden = true; $(".barra-sel").hidden = true;
+      $("#rev").innerHTML = ""; $("#rev").hidden = true;
+      return;
+    }
+    $("#sel-todos").hidden = !lista.length; $(".barra-sel").hidden = !lista.length; $("#rev").hidden = false;
+    $("#c-t").textContent = actual;
+    $("#c-sub").textContent = lista.length ? `${z.zona} · ${fmt(lista.length)} por validar · registró ${registro(lista[0].reg)}` : z.zona;
+    $("#items").innerHTML = lista.map((x, i) => `<li class="item" data-i="${i}" aria-current="${i === cursor}">
+      <input type="checkbox" aria-label="Seleccionar ${esc(x.id)}" ${sel.has(x.id) ? "checked" : ""}>
+      <span class="thumb">${ficha(x)}</span>
+      <span style="min-width:0"><b class="num">${esc(x.id)}</b><small>${esc(x.eq)} · ${x.marca ? esc(x.marca) : "Sin marca"}</small><small class="serie-l">Serie <span class="num">${x.serie ? esc(x.serie) : "sin serie"}</span></small></span>
+      <span class="flag">${x.ficha ? `<span class="pill neutral">${cuando(x.dias)}</span>` : `<span class="pill bad">Sin ficha</span>`}</span>
+    </li>`).join("");
+    $("#items").hidden = !lista.length; $("#c-vacio").hidden = !!lista.length;
+    $$("#items .item").forEach((li) => {
+      const i = +li.dataset.i, x = lista[i];
+      li.addEventListener("click", (e) => {
+        if (e.target.matches("input")) { e.target.checked ? sel.add(x.id) : sel.delete(x.id); contar(); return; }
+        cursor = i; verFoto = false; pintarCola();
+      });
+    });
+    pintarRev(); contar();
+  }
+  function pintarRev() {
+    const lista = colas[actual] || [], x = lista[cursor];
+    if (!x) { $("#rev").innerHTML = `<p class="hint">Elige un equipo para revisarlo.</p>`; return; }
+    $("#rev").innerHTML = `
+      <div><p class="eyebrow">${esc(actual)} · ${fmt(cursor + 1)} de ${fmt(lista.length)}</p><h3 class="num" style="font-size:18px;overflow-wrap:anywhere">${esc(x.id)}</h3><p class="sub" style="margin:0">${esc(x.eq)}</p></div>
+      <div class="big">${verFoto ? fotoEq(x) : x.ficha ? ficha(x, true) : `<span style="display:grid;place-items:center;height:100%;color:var(--muted)">El supervisor no subió la ficha técnica</span>`}</div>
+      <div class="fotos"><button type="button" aria-pressed="${!verFoto}" data-v="ficha">${x.ficha ? ficha(x) : "Ficha"}</button>${x.foto ? `<button type="button" aria-pressed="${verFoto}" data-v="foto">${fotoEq(x)}</button>` : ""}</div>
+      <dl class="cmp"><dt>Serie registrada</dt><dd>${x.serie ? `<span class="serie">${esc(x.serie)}</span>` : "Sin serie: pídela al supervisor"}</dd><dt>Marca y modelo</dt><dd>${x.marca ? esc(x.marca) : "Sin marca"}</dd><dt>Registró</dt><dd>${esc(registro(x.reg))} · ${cuando(x.dias).toLowerCase()}</dd></dl>
+      <p class="hint">${x.ficha ? "Compara la serie resaltada con la de la placa." : "Sin ficha no se puede comparar la serie: pide la foto al supervisor."}</p>
+      <div class="acts"><button class="btn primary" type="button" id="ok-sig" ${x.ficha ? "" : "disabled"}>Validar y seguir →</button><button class="btn" type="button" id="saltar">Saltar</button><a class="btn ghost" href="#cola">Editar equipo</a></div>`;
+    $$("#rev [data-v]").forEach((b) => b.addEventListener("click", () => { verFoto = b.dataset.v === "foto"; pintarRev(); }));
+    $("#saltar").addEventListener("click", () => { cursor = (cursor + 1) % lista.length; verFoto = false; pintarCola(); });
+    const ok = $("#ok-sig"); if (ok) ok.addEventListener("click", () => quitar([x.id]));
+  }
+  function quitar(ids) {
+    const lista = colas[actual];
+    colas[actual] = lista.filter((x) => !ids.includes(x.id));
+    ZONAS.forEach((z) => z.sucs.forEach((s) => { if (s.n === actual) { s.pend -= ids.length; s.val += ids.length; } }));
+    ids.forEach((id) => sel.delete(id));
+    cursor = Math.min(cursor, Math.max(colas[actual].length - 1, 0));
+    pintarSucs(); pintarCola(); pintarZonas(); pintarResumen();
+  }
+  function contar() {
+    const n = sel.size, tot = (colas[actual] || []).length;
+    $("#sel-n").textContent = n ? `${fmt(n)} de ${fmt(tot)} ${n === 1 ? "seleccionado" : "seleccionados"} en ${actual}` : "Ninguno seleccionado";
+    $("#validar").disabled = !n;
+    $("#validar").textContent = n ? `Validar ${fmt(n)}` : "Validar seleccionados";
+    $("#sel-todos").textContent = n === tot && tot ? "Quitar selección" : "Seleccionar todos";
+  }
+  $("#sel-todos").addEventListener("click", () => {
+    const lista = colas[actual] || [];
+    sel = sel.size === lista.length ? new Set() : new Set(lista.map((x) => x.id));
+    pintarCola();
+  });
+  $("#validar").addEventListener("click", () => quitar([...sel]));
+
+  // ---------- Vistas de la maqueta y conjunto de datos (en el hash: #demo, #peor, #vacio, #uno, #mil, #diagnostico) ----------
+  function vista(forzado) {
+    const h = forzado || location.hash.slice(1);
+    const v = h === "diagnostico" ? "diagnostico" : "propuesta";
+    const conjunto = CONJUNTOS[h] ? h : "demo";
+    $("#vista-propuesta").hidden = v !== "propuesta"; $("#vista-diagnostico").hidden = v !== "diagnostico";
+    $$(".band a").forEach((a) => { const on = v === "diagnostico" ? a.getAttribute("href") === "#diagnostico" : a.getAttribute("href") !== "#diagnostico"; if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+    $("#datos").hidden = v !== "propuesta";
+    $$("#datos button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.d === conjunto));
+    if (v === "propuesta") {
+      cargar(conjunto);
+      pintarResumen(); pintarZonas();
+      const primera = ZONAS.flatMap((z) => z.sucs).find((s) => (colas[s.n] || []).length);
+      elegir(primera ? primera.n : null);
+    }
+  }
+  // El conjunto queda en el hash para que una recarga lo conserve (donde el navegador lo permite).
+  $$("#datos button").forEach((b) => b.addEventListener("click", () => {
+    try { history.replaceState(null, "", "#" + b.dataset.d); } catch (e) { /* vista previa local sin historial */ }
+    vista(b.dataset.d);
+  }));
+  window.addEventListener("hashchange", () => vista());
+  vista();
+})();
+</script>

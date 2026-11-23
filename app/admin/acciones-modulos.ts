@@ -283,11 +283,13 @@ export async function validarActivos(f: FormData) {
   const { userId } = await requireAdmin();
   const supabase = await createClient();
   const ids = f.getAll("id").map(String).filter(Boolean);
-  const volver = txt(f, "volver") || "/admin/activos/censo";
-  if (!ids.length) redirect(`${volver}${volver.includes("?") ? "&" : "?"}error=${encodeURIComponent("Selecciona al menos un equipo.")}`);
+  // El ancla (#cola) va al final, después de los parámetros, para volver al mismo punto de la página.
+  const [base, ancla] = (txt(f, "volver") || "/admin/activos/censo").split("#");
+  const con = (p: string) => `${base}${base.includes("?") ? "&" : "?"}${p}${ancla ? `#${ancla}` : ""}`;
+  if (!ids.length) redirect(con(`error=${encodeURIComponent("Selecciona al menos un equipo.")}`));
   await supabase.from("activos").update({ validado: true, validado_por: userId, validado_en: new Date().toISOString() }).in("id", ids);
   revalidatePath("/admin/activos", "layout");
-  redirect(`${volver}${volver.includes("?") ? "&" : "?"}ok=validados-${ids.length}`);
+  redirect(con(`ok=validados-${ids.length}`));
 }
 
 // ---------- Caja chica ----------
