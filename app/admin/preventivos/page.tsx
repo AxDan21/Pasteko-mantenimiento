@@ -57,7 +57,7 @@ export default async function Preventivos({ searchParams }: { searchParams: Prom
       {f.ok && <div className="note ok" style={{ marginBottom: 14 }}>Se programaron {f.ok} preventivo{f.ok === "1" ? "" : "s"}.</div>}
       {f.error && <div className="note bad" style={{ marginBottom: 14 }}>{f.error === "datos" ? "Llena fecha, sucursal, equipo y tarea." : `No se pudo guardar: ${f.error}`}</div>}
 
-      <section className="card" style={{ marginBottom: 18 }}>
+      <section className="card" id="nuevo" style={{ marginBottom: 18, scrollMarginTop: 80 }}>
         <h3>Programar preventivo</h3>
         <p className="sub">El técnico asignado lo verá al crear su hoja de servicio; al enviarla, el preventivo se marca como hecho.</p>
         <form action={crearPreventivos} className="inline-form" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))" }}>

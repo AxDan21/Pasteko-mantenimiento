@@ -6,10 +6,11 @@ import { mxn } from "@/lib/format";
 import { edadAnios, estadoGarantia, hoy, recomendacion } from "@/lib/panel";
 import type { Activo } from "@/lib/types";
 import { crearActivo } from "../acciones-modulos";
+import PanelEquipo from "@/components/PanelEquipo";
 import Seccion from "@/components/Seccion";
 import { vistasEquipos } from "@/lib/secciones";
 
-type F = { zona?: string; equipo?: string; rec?: string; bajas?: string; ok?: string; error?: string };
+type F = { zona?: string; suc?: string; equipo?: string; rec?: string; bajas?: string; nuevo?: string; sel?: string; ok?: string; error?: string };
 
 export default async function Activos({ searchParams }: { searchParams: Promise<F> }) {
   await requireAdmin();
@@ -36,6 +37,7 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
   });
   let filas = info;
   if (f.zona) filas = filas.filter((i) => sucPorId.get(i.x.sucursal_id)?.zona === f.zona);
+  if (f.suc) filas = filas.filter((i) => i.x.sucursal_id === Number(f.suc));
   if (f.equipo) filas = filas.filter((i) => i.x.equipo === f.equipo);
   if (f.rec === "garantia") filas = filas.filter((i) => i.pagadoGar > 0);
   else if (f.rec === "validar") filas = filas.filter((i) => !i.x.validado);
@@ -45,6 +47,10 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
   const porVencer = info.filter((i) => i.gar.clase === "warn").length;
   const reemplazo = info.filter((i) => i.rec.clase === "bad").length;
   const pagado = info.reduce((s, i) => s + i.pagadoGar, 0);
+
+  // Filtros vigentes, para abrir y cerrar el panel de detalle sin perderlos.
+  const filtros = new URLSearchParams(Object.entries({ zona: f.zona, suc: f.suc, equipo: f.equipo, rec: f.rec, bajas: f.bajas }).filter(([, v]) => v) as [string, string][]);
+  const conSel = (id?: string) => { const q = new URLSearchParams(filtros); if (id) q.set("sel", id); const t = q.toString(); return t ? `/admin/activos?${t}` : "/admin/activos"; };
 
   return (
     <main className="wrap">
@@ -57,6 +63,12 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
         acciones={<Link className="btn" href="/admin/exportar?tabla=activos">Descargar CSV</Link>}
       />
 
+      {f.suc && (
+        <div className="note ok" style={{ marginBottom: 14, display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <span>Mostrando los equipos de {sucPorId.get(Number(f.suc))?.nombre ?? "la sucursal"}.</span>
+          <Link href="/admin/activos">Ver todos</Link>
+        </div>
+      )}
       {f.ok && <div className="note ok" style={{ marginBottom: 14 }}>Equipo dado de alta como {f.ok}. Imprime ese código en su etiqueta.</div>}
       {f.error && <div className="note bad" style={{ marginBottom: 14 }}>No se pudo guardar: {f.error}</div>}
 
@@ -74,7 +86,7 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
         <div className="kpi"><span className="eyebrow">Pagado en garantía</span><span className="v" style={{ color: pagado ? "var(--bad)" : undefined }}>{mxn(pagado)}</span><span className="s">Correctivos con garantía vigente: reclamar</span></div>
       </div>
 
-      <details className="card alta-det">
+      <details className="card alta-det" id="nuevo" open={!!f.nuevo} style={{ scrollMarginTop: 80 }}>
         <summary><h3>Dar de alta equipo</h3><span className="btn primary small">+ Nuevo equipo</span></summary>
         <p className="sub">Si dejas el código vacío se genera solo (ej. PK-CAF-004). Al guardar se abre su ficha con la etiqueta QR lista para imprimir.</p>
         <form action={crearActivo} className="inline-form">
@@ -119,31 +131,34 @@ export default async function Activos({ searchParams }: { searchParams: Promise<
       </form>
 
       {filas.length ? (
+        <div className={`lst${f.sel ? " con-panel" : ""}`}>
         <div className="tbl-wrap">
-          <table>
-            <thead><tr><th>Código</th><th>Sucursal</th><th>Equipo</th><th>Antigüedad</th><th>Garantía</th><th className="r">Reparaciones</th><th>Recomendación</th></tr></thead>
+          <table className="tbl-sel">
+            <thead><tr><th>Código</th><th>Sucursal</th><th>Equipo</th><th className="ocultable">Antigüedad</th><th className="ocultable">Garantía</th><th className="r ocultable">Reparaciones</th><th className="ocultable">Recomendación</th></tr></thead>
             <tbody>
               {filas.map(({ x, total, gar, rec, pagadoGar }) => {
                 const pct = x.costo > 0 ? (total / Number(x.costo)) * 100 : 0;
                 const edad = edadAnios(x.fecha_compra, h);
                 return (
-                  <tr key={x.id} style={x.activo ? undefined : { opacity: 0.55 }}>
-                    <td className="num"><Link href={`/admin/activos/${x.id}`}><b>{x.id}</b></Link></td>
+                  <tr key={x.id} style={x.activo ? undefined : { opacity: 0.55 }} aria-selected={f.sel === x.id}>
+                    <td className="num"><Link href={conSel(x.id)} scroll={false} title="Ver detalle"><b>{x.id}</b></Link></td>
                     <td>{sucPorId.get(x.sucursal_id)?.nombre}</td>
                     <td>{x.descripcion || x.equipo}<br /><small style={{ color: "var(--muted)" }}>{x.descripcion ? `${x.equipo} · ` : ""}{[x.marca, x.modelo].filter(Boolean).join(" ") || "—"}</small></td>
-                    <td className="num">{edad === null ? "—" : `${edad.toFixed(1)} / ${x.vida_anios} años`}</td>
-                    <td><span className={`pill ${gar.clase}`}>{gar.texto}</span>{x.garantia_path && <> <span className="pill neutral">PDF</span></>}{pagadoGar > 0 && <> <span className="pill bad">Pagado en garantía</span></>}</td>
-                    <td className="r">
+                    <td className="num ocultable">{edad === null ? "—" : `${edad.toFixed(1)} / ${x.vida_anios} años`}</td>
+                    <td className="ocultable"><span className={`pill ${gar.clase}`}>{gar.texto}</span>{x.garantia_path && <> <span className="pill neutral">PDF</span></>}{pagadoGar > 0 && <> <span className="pill bad">Pagado en garantía</span></>}</td>
+                    <td className="r ocultable">
                       <span className="num">{mxn(total)}</span>
                       <div className="bar" style={{ marginTop: 4 }}><i className={pct >= 50 ? "bad" : pct >= 30 ? "warn" : ""} style={{ width: `${Math.min(pct, 100)}%` }} /></div>
                       <small style={{ color: "var(--muted)" }}>{pct.toFixed(0)}% de {mxn(Number(x.costo))}</small>
                     </td>
-                    <td>{x.validado === false ? <span className="pill warn">Por validar</span> : <span className={`pill ${rec.clase}`}>{x.activo ? rec.texto : "Dado de baja"}</span>}</td>
+                    <td className="ocultable">{x.validado === false ? <span className="pill warn">Por validar</span> : <span className={`pill ${rec.clase}`}>{x.activo ? rec.texto : "Dado de baja"}</span>}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        </div>
+        {f.sel && <PanelEquipo id={f.sel} cerrar={conSel()} />}
         </div>
       ) : (
         <div className="card"><h3>Sin equipos registrados</h3><p className="sub">Da de alta los equipos de cada sucursal. Con el código podrás ligar hojas, gastos y preventivos a cada equipo.</p></div>

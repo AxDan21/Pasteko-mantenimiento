@@ -1,7 +1,9 @@
 import Link from "next/link";
 import ActivarAvisos from "@/components/ActivarAvisos";
+import PanelTicket from "@/components/PanelTicket";
 import Seccion from "@/components/Seccion";
 import { vistasServicio } from "@/lib/secciones";
+import { mxn } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { ABIERTOS, ESTADOS, PRIORIDAD, VENDER, duracion, folioTicket, hace, tiempo, type Ticket } from "@/lib/tickets";
 
@@ -10,20 +12,25 @@ export const dynamic = "force-dynamic";
 type Fila = Ticket & { sucursales: { nombre: string; zona: string } | null };
 const FILTROS = [
   ["abiertos", "Abiertos"],
+  ["sin_asignar", "Sin asignar"],
+  ["por_revisar", "Hojas por revisar"],
   ["resueltos", "Resueltos"],
   ["todos", "Todos"],
 ] as const;
+type HojaRev = { id: string; folio: number; creada: string; sucursal: string; tecnico: string | null; equipo: string; tipo: string; total: number };
 
-export default async function MesaDeAyuda({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
-  const { f = "abiertos" } = await searchParams;
+export default async function MesaDeAyuda({ searchParams }: { searchParams: Promise<{ f?: string; sel?: string }> }) {
+  const { f = "abiertos", sel } = await searchParams;
   const supabase = await createClient();
   const desde = new Date(Date.now() - 30 * 864e5).toISOString();
-  const [{ data: abiertosD }, { data: recientes }, { data: tecnicos }, vistas] = await Promise.all([
+  const [{ data: abiertosD }, { data: recientes }, { data: tecnicos }, vistas, { data: revD }] = await Promise.all([
     supabase.from("tickets").select("*, sucursales(nombre, zona)").in("estado", ABIERTOS),
     supabase.from("tickets").select("*, sucursales(nombre, zona)").gte("creado", desde).order("creado", { ascending: false }),
     supabase.from("perfiles").select("id, nombre"),
     vistasServicio(supabase),
+    supabase.from("v_hojas").select("id, folio, creada, sucursal, tecnico, equipo, tipo, total").eq("estado", "Enviada").order("creada", { ascending: false }),
   ]);
+  const porRevisar = (revD ?? []) as HojaRev[];
   const abiertos = (abiertosD ?? []) as Fila[];
   const mes = (recientes ?? []) as Fila[];
   const nombreTec = new Map((tecnicos ?? []).map((p) => [p.id as string, (p.nombre as string).split(" ")[0]]));
@@ -33,6 +40,8 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
   const lista: Fila[] =
     f === "abiertos"
       ? [...abiertos].sort((a, b) => peso[a.prioridad] - peso[b.prioridad] || +new Date(a.creado) - +new Date(b.creado))
+      : f === "sin_asignar"
+        ? abiertos.filter((t) => t.estado === "abierto").sort((a, b) => peso[a.prioridad] - peso[b.prioridad] || +new Date(a.creado) - +new Date(b.creado))
       : f === "resueltos"
         ? mes.filter((t) => !ABIERTOS.includes(t.estado))
         : mes;
@@ -46,6 +55,11 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
     const m = new Map<string, number>();
     mes.forEach((t) => m.set(clave(t), (m.get(clave(t)) ?? 0) + 1));
     return [...m].sort((a, b) => b[1] - a[1]).slice(0, 5);
+  };
+  const cuentas: Record<string, number> = {
+    abiertos: abiertos.length,
+    sin_asignar: abiertos.filter((t) => t.estado === "abierto").length,
+    por_revisar: porRevisar.length,
   };
   const porSucursal = conteo((t) => t.sucursales?.nombre ?? "—");
   const porEquipo = conteo((t) => t.equipo);
@@ -68,18 +82,42 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
         <div className="tkb-k"><span>Resolución media</span><b className="num">{promedio === null ? "—" : duracion(promedio)}</b><small>{aTiempo === null ? "últimos 30 días" : `${aTiempo}% a tiempo · 30 días`}</small></div>
       </div>
 
-      <div className="tkb-grid">
+      <div className={`tkb-grid${sel ? " con-panel" : ""}`}>
         <section>
           <nav className="tkb-filtros" aria-label="Filtro">
             {FILTROS.map(([k, n]) => (
               <Link key={k} href={`/admin/tickets?f=${k}`} aria-current={f === k ? "page" : undefined}>
-                {n}{k === "abiertos" ? ` · ${abiertos.length}` : ""}
+                {n}{cuentas[k] ? ` · ${cuentas[k]}` : ""}
               </Link>
             ))}
           </nav>
-          {lista.length === 0 ? (
+          {f === "por_revisar" ? (
+            porRevisar.length === 0 ? (
+              <div className="tkb-vacio card">
+                <b>Sin hojas por revisar</b>
+                <span className="sub">Cuando un técnico envíe una hoja de servicio, aparecerá aquí para tu visto bueno.</span>
+              </div>
+            ) : (
+              <ul className="tkb-lista">
+                {porRevisar.map((x) => (
+                  <li key={x.id}>
+                    <Link href={`/admin/hojas/${x.id}`} className={`tkb-item ${x.tipo === "Correctivo" ? "p-media" : "p-baja"}`}>
+                      <div className="tkb-l1">
+                        <span className="num tkb-folio">Hoja #{x.folio}</span>
+                        <span className="pill warn">Por revisar</span>
+                        <span className="pill neutral">{x.tipo}</span>
+                        <span className="tkb-t">hace {hace(x.creada, ahora)}</span>
+                      </div>
+                      <b className="tkb-tit">{x.sucursal} · {x.equipo}</b>
+                      <span className="tkb-l3">{x.tecnico ?? "Técnico"} · <span className="num">{mxn(Number(x.total))}</span></span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )
+          ) : lista.length === 0 ? (
             <div className="tkb-vacio card">
-              <b>{f === "abiertos" ? "Sin reportes abiertos" : "Sin reportes en los últimos 30 días"}</b>
+              <b>{f === "abiertos" ? "Sin reportes abiertos" : f === "sin_asignar" ? "Todos los reportes tienen técnico" : "Sin reportes en los últimos 30 días"}</b>
               <span className="sub">Cuando una tienda escanee el QR de un equipo y reporte una falla, aparecerá aquí y te llegará una notificación.</span>
             </div>
           ) : (
@@ -88,7 +126,7 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
                 const tm = tiempo(t, ahora);
                 return (
                   <li key={t.id}>
-                    <Link href={`/admin/tickets/${t.id}`} className={`tkb-item p-${t.prioridad}`}>
+                    <Link href={`/admin/tickets?f=${f}&sel=${t.id}`} scroll={false} className={`tkb-item p-${t.prioridad}`} aria-current={sel === t.id ? "true" : undefined}>
                       <div className="tkb-l1">
                         <span className="num tkb-folio">{folioTicket(t.folio)}</span>
                         <span className={`pill ${ESTADOS[t.estado].clase}`}>{ESTADOS[t.estado].nombre}</span>
@@ -112,6 +150,7 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
           )}
         </section>
 
+        {sel ? <PanelTicket id={sel} cerrar={`/admin/tickets?f=${f}`} /> : (
         <aside className="tkb-lado">
           <div className="card">
             <h3>Tiendas que más reportan</h3>
@@ -132,6 +171,7 @@ export default async function MesaDeAyuda({ searchParams }: { searchParams: Prom
             ) : <p className="sub">Sin datos todavía.</p>}
           </div>
         </aside>
+        )}
       </div>
     </main>
   );

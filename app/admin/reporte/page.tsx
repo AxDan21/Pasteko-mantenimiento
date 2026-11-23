@@ -95,10 +95,6 @@ export default async function Reporte({ searchParams }: { searchParams: Promise<
           <p className="eyebrow">Panel de mantenimiento</p>
           <h1 className="page-h">Reporte de {nombreMes(mes)}</h1>
         </div>
-        <form method="get" className="toolbar" style={{ margin: 0 }}>
-          <label className="field">Mes<input id="r-mes" name="mes" type="month" defaultValue={mes} /></label>
-          <button className="btn" type="submit">Ver</button>
-        </form>
       </div>
       <div className="panel-grid">
         <section className="card report">

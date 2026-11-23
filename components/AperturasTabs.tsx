@@ -14,7 +14,6 @@ export default function AperturasTabs({ admin }: { admin: boolean }) {
   return (
     <nav className="admin-tabs no-print" aria-label="Aperturas">
       <div className="wrap">
-        {admin && <Link href="/admin">← Panel de mantenimiento</Link>}
         {TABS.map(([href, label]) => (
           <Link key={href} href={href} aria-current={activo(href) ? "page" : undefined}>
             {label}

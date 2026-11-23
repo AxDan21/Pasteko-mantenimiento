@@ -1,0 +1,590 @@
+<title>Panel Admin Pasteko</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:wght@600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: shell de app = barra lateral agrupada por trabajo + barra superior con contexto (periodo, búsqueda, crear) + lienzo.
+   Tokens heredados de app/globals.css (identidad Pasteko). */
+:root {
+  --naranja: #ea5731; --amarillo: #fab428; --negro: #1d1d1b; --verde: #46ad48; --magenta: #d4005a; --turquesa: #00747a;
+  --bg: #f4f4f4; --surface: #ffffff; --surface-2: #ebebeb; --ink: #1d1d1b; --muted: #5b5b59; --line: #dcdcdb;
+  --side-bg: #1d1d1b; --side-ink: #ffffff; --side-muted: #a3a3a2; --side-hover: #2c2c2a;
+  --orange: #ea5731; --on-orange: #1d1d1b; --brand: #b7492c; --brand-soft: #fce7e2;
+  --ok: #3a823a; --ok-soft: #e3f3e4; --warn: #8c6922; --warn-soft: #fef0d4; --bad: #b5004d; --bad-soft: #fae0eb;
+  --shadow: 0 1px 2px rgba(29,29,27,.06), 0 8px 24px rgba(29,29,27,.06);
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1d1d1b; --surface: #262624; --surface-2: #30302e; --ink: #f4f4f4; --muted: #a3a3a2; --line: #3a3a38;
+  --side-bg: #141413; --side-hover: #262624; --brand: #fab428; --brand-soft: #46291f;
+  --ok: #6cc06d; --ok-soft: #253a24; --warn: #fab428; --warn-soft: #493b1e; --bad: #e5669c; --bad-soft: #421728;
+  --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #1d1d1b; --surface: #262624; --surface-2: #30302e; --ink: #f4f4f4; --muted: #a3a3a2; --line: #3a3a38;
+  --side-bg: #141413; --side-hover: #262624; --brand: #fab428; --brand-soft: #46291f;
+  --ok: #6cc06d; --ok-soft: #253a24; --warn: #fab428; --warn-soft: #493b1e; --bad: #e5669c; --bad-soft: #421728;
+  --shadow: 0 1px 2px rgba(0,0,0,.3); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; margin: 0; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+a { color: inherit; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.btn, .chip, .row { color: var(--ink); }
+:focus-visible { outline: 3px solid var(--orange); outline-offset: 2px; border-radius: 6px; }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+svg.i { width: 18px; height: 18px; flex: none; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- Banda de maqueta ---------- */
+.mq-band { background: var(--amarillo); color: #1d1d1b; font-size: 13px; font-weight: 700; padding-block: 6px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.mq-band nav { display: flex; gap: 4px; flex-wrap: wrap; }
+.mq-band a { text-decoration: none; padding: 3px 10px; border-radius: 999px; background: rgba(29,29,27,.08); }
+.mq-band a[aria-current="page"] { background: #1d1d1b; color: #fab428; }
+
+/* ---------- Shell ---------- */
+.shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); min-height: calc(100vh - 34px); }
+.side { background: var(--side-bg); color: var(--side-ink); padding: 14px 12px 18px; display: flex; flex-direction: column; gap: 14px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+.brand { display: flex; gap: 10px; align-items: center; padding: 4px 6px 8px; text-decoration: none; }
+.brand-mark { width: 36px; height: 36px; border-radius: 50%; background: var(--orange); display: grid; place-items: center; font-family: var(--f-display); font-weight: 800; color: #1d1d1b; }
+.brand b { font-family: var(--f-display); font-size: 16px; display: block; line-height: 1.1; }
+.brand small { color: var(--side-muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.search-btn { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #3a3a38; background: transparent; color: var(--side-muted); font-size: 14px; text-align: left; }
+.search-btn kbd { margin-left: auto; font-family: var(--f-mono); font-size: 11px; border: 1px solid #3a3a38; border-radius: 4px; padding: 1px 5px; }
+.grp { display: flex; flex-direction: column; gap: 1px; }
+.grp-t { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--side-muted); font-weight: 700; padding: 6px 10px 4px; }
+.nav-a { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; text-decoration: none; color: #d8d8d6; font-weight: 700; font-size: 14px; position: relative; }
+.nav-a:hover { background: var(--side-hover); color: #fff; }
+.nav-a[aria-current="page"] { background: var(--orange); color: #1d1d1b; }
+.nav-a .cnt { margin-left: auto; font-family: var(--f-mono); font-size: 11px; min-width: 22px; height: 20px; padding: 0 6px; border-radius: 999px; display: grid; place-items: center; background: #3a3a38; color: #fff; }
+.nav-a .cnt.bad { background: var(--magenta); }
+.nav-a[aria-current="page"] .cnt { background: #1d1d1b; color: #fff; }
+.side-foot { margin-top: auto; border-top: 1px solid #3a3a38; padding-top: 12px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: #3a3a38; display: grid; place-items: center; font-weight: 700; flex: none; }
+.side-foot small { color: var(--side-muted); display: block; }
+.side-foot a { margin-left: auto; color: var(--side-muted); font-size: 12px; }
+
+.main { min-width: 0; display: flex; flex-direction: column; }
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.crumbs { font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; min-width: 0; }
+.crumbs b { color: var(--ink); }
+.top-r { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.periodo { display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; overflow: hidden; }
+.periodo button { border: 0; background: none; padding: 7px 10px; font-weight: 700; color: var(--ink); }
+.periodo button:disabled { color: var(--muted); cursor: not-allowed; }
+.periodo span { padding: 7px 6px; font-weight: 700; font-size: 14px; border-inline: 1px solid var(--line); }
+.btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); padding: 8px 12px; border-radius: 8px; font-weight: 700; font-size: 14px; text-decoration: none; }
+.btn:hover { border-color: var(--orange); }
+.btn.primary { background: var(--orange); border-color: var(--orange); color: var(--on-orange); }
+.btn.ghost { background: transparent; }
+.btn.sm { padding: 5px 10px; font-size: 13px; }
+.bell { position: relative; }
+.bell i { position: absolute; top: 4px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--magenta); }
+.menu { position: relative; }
+.menu-pop { position: absolute; right: 0; top: calc(100% + 6px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); padding: 6px; min-width: 230px; z-index: 20; }
+.menu-pop a { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 14px; }
+.menu-pop a:hover { background: var(--surface-2); }
+.menu-pop small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+
+.canvas { padding-block: 22px 90px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 1240px; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+.page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.page-head h1 { font-size: clamp(24px, 3vw, 32px); font-weight: 800; }
+.page-head p { margin: 4px 0 0; color: var(--muted); max-width: 62ch; }
+.eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; margin: 0 0 4px; }
+.pill { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.bad { background: var(--bad-soft); color: var(--bad); } .pill.neutral { background: var(--surface-2); color: var(--muted); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; min-width: 0; }
+.card > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+.card h3 { font-size: 16px; }
+.card header p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.more { font-size: 13px; font-weight: 700; color: var(--brand); text-decoration: none; white-space: nowrap; }
+.anot { border: 2px dashed var(--turquesa); border-radius: 12px; position: relative; }
+.kpis.anot, .filters.anot, section.anot { padding: 8px; }
+.anot::after { content: attr(data-n); position: absolute; top: -12px; left: -12px; width: 24px; height: 24px; border-radius: 50%; background: var(--turquesa); color: #fff; font-weight: 800; font-size: 12px; display: grid; place-items: center; font-family: var(--f-mono); }
+body.sin-notas .anot { border-color: transparent; } body.sin-notas .anot::after { display: none; }
+
+/* ---------- Inicio ---------- */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; text-decoration: none; }
+.kpi:hover { border-color: var(--orange); }
+.kpi span { font-size: 13px; color: var(--muted); font-weight: 700; }
+.kpi b { font-family: var(--f-display); font-size: 26px; font-weight: 800; line-height: 1.1; }
+.kpi small { font-size: 12px; color: var(--muted); }
+.kpi .bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-top: 4px; }
+.kpi .bar i { display: block; height: 100%; background: var(--warn); }
+.d-up { color: var(--bad); font-weight: 700; } .d-dn { color: var(--ok); font-weight: 700; }
+
+.inbox { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.tasks { display: flex; flex-direction: column; }
+.task { display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+.task:first-of-type { border-top: 0; }
+.task .sev { align-self: stretch; border-radius: 3px; }
+.sev.bad { background: var(--magenta); } .sev.warn { background: var(--amarillo); } .sev.neutral { background: var(--line); }
+.task b { display: block; font-size: 15px; }
+.task small { color: var(--muted); font-size: 13px; }
+.task .acc { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.task.hecho { opacity: .45; }
+.task.hecho b { text-decoration: line-through; }
+.calm { display: flex; gap: 10px; align-items: center; padding: 12px; border-radius: 8px; background: var(--ok-soft); color: var(--ok); font-weight: 700; font-size: 14px; }
+.later { display: flex; flex-direction: column; gap: 8px; }
+.later a { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; text-decoration: none; font-size: 14px; background: var(--surface-2); }
+.later a:hover { outline: 1px solid var(--orange); }
+.later .num { font-weight: 600; }
+
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.tabs button { border: 0; background: none; padding: 10px 14px 11px; font-weight: 700; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--orange); }
+.analisis { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; }
+.chart svg { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font-family: var(--f-mono); font-size: 11px; }
+.rank { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.rank li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; font-size: 14px; }
+.rank .rb { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; }
+.rank .rb i { display: block; height: 100%; background: var(--orange); }
+.err { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 14px; }
+.err b { display: block; }
+
+/* ---------- Servicio ---------- */
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 700; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.filters input { flex: 1 1 200px; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 10px; font: inherit; color: var(--ink); }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 16px; align-items: start; }
+.list { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.row { display: grid; grid-template-columns: 4px minmax(0, 1fr) auto; gap: 12px; padding: 12px 14px 12px 0; border-top: 1px solid var(--line); text-align: left; background: none; border-left: 0; border-right: 0; border-bottom: 0; width: 100%; }
+.row:first-child { border-top: 0; }
+.row:hover { background: var(--surface-2); }
+.row[aria-current="true"] { background: var(--brand-soft); }
+.row .l1 { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; }
+.row b { display: block; font-size: 15px; margin-top: 2px; }
+.row small { color: var(--muted); font-size: 13px; display: block; }
+.row .t { font-size: 12px; font-family: var(--f-mono); color: var(--muted); white-space: nowrap; }
+.row .t.bad { color: var(--bad); font-weight: 600; }
+.detail { position: sticky; top: 70px; display: flex; flex-direction: column; gap: 14px; }
+.steps { display: flex; gap: 0; list-style: none; margin: 0; padding: 0; }
+.steps li { flex: 1; text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); position: relative; padding-top: 18px; }
+.steps li::before { content: ""; position: absolute; top: 4px; left: 50%; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--line); z-index: 1; }
+.steps li::after { content: ""; position: absolute; top: 8px; left: 0; right: 0; height: 2px; background: var(--line); }
+.steps li.done { color: var(--ink); } .steps li.done::before, .steps li.done::after { background: var(--orange); }
+.steps li.now::before { background: var(--orange); box-shadow: 0 0 0 4px var(--brand-soft); }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; font-size: 14px; margin: 0; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-weight: 700; }
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+.timeline li { display: grid; grid-template-columns: 70px minmax(0, 1fr); gap: 10px; }
+.timeline .num { font-size: 12px; color: var(--muted); }
+.actbar { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- Propuesta ---------- */
+.cmp { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.tabs-old { display: flex; flex-wrap: wrap; gap: 4px; }
+.tabs-old span { font-size: 12px; padding: 4px 8px; border-radius: 4px; background: var(--surface-2); font-weight: 700; }
+.ia { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.ia div { border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 13px; }
+.ia b { display: block; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--brand); margin-bottom: 4px; }
+.ia ul { margin: 0; padding-left: 16px; }
+.hall { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.hall .card { display: flex; flex-direction: column; gap: 6px; }
+.hall h3 { display: flex; gap: 8px; align-items: center; font-size: 15px; }
+.hall h3 .num { width: 24px; height: 24px; border-radius: 50%; background: var(--turquesa); color: #fff; font-size: 12px; display: grid; place-items: center; flex: none; }
+.hall p { margin: 0; font-size: 14px; color: var(--muted); }
+.hall .fix { color: var(--ink); }
+.road { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.road li { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; font-size: 14px; }
+.road li b { font-family: var(--f-display); font-size: 15px; display: block; margin-bottom: 6px; }
+.road ul { margin: 0; padding-left: 18px; color: var(--muted); }
+
+/* ---------- Comando ---------- */
+.cmdk { position: fixed; inset: 0; background: rgba(29,29,27,.45); z-index: 50; display: grid; place-items: start center; padding: 12vh 16px 0; }
+.cmdk-box { width: min(560px, 100%); background: var(--surface); border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.3); overflow: hidden; border: 1px solid var(--line); }
+.cmdk-box input { width: 100%; border: 0; border-bottom: 1px solid var(--line); padding: 14px 16px; font: inherit; font-size: 16px; background: transparent; color: var(--ink); outline: none; }
+.cmdk-list { max-height: 50vh; overflow-y: auto; padding: 6px; }
+.cmdk-sec { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 8px 10px 4px; }
+.cmdk-it { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 6px; text-decoration: none; font-size: 14px; }
+.cmdk-it.sel, .cmdk-it:hover { background: var(--brand-soft); }
+.cmdk-it small { margin-left: auto; color: var(--muted); font-size: 12px; }
+
+/* ---------- Móvil ---------- */
+.mtop { display: none; }
+.bnav { display: none; }
+@media (max-width: 980px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inbox, .analisis, .split, .cmp, .hall { grid-template-columns: minmax(0, 1fr); }
+  .road { grid-template-columns: minmax(0, 1fr); }
+  .detail { position: static; }
+}
+@media (max-width: 760px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .side { display: none; }
+  .side.open { display: flex; position: fixed; inset: 0 auto 0 0; width: min(290px, 86vw); z-index: 40; padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
+  .scrim { position: fixed; inset: 0; background: rgba(29,29,27,.45); z-index: 39; }
+  .crumbs .hide-m, .top-r .hide-m { display: none; }
+  .mtop { display: inline-flex; }
+  .bnav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; inset: auto 0 0 0; background: var(--side-bg); z-index: 30; padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+  .bnav a, .bnav button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px 9px; font-size: 11px; font-weight: 700; color: var(--side-muted); text-decoration: none; background: none; border: 0; position: relative; }
+  .bnav [aria-current="page"] { color: var(--orange); }
+  .bnav .dot { position: absolute; top: 4px; left: calc(50% + 6px); min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px; background: var(--magenta); color: #fff; font-size: 10px; display: grid; place-items: center; }
+  .task { grid-template-columns: 6px minmax(0, 1fr); }
+  .task .acc { grid-column: 2; justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: no-preference) { .task, .row, .nav-a { transition: background .15s, opacity .2s; } }
+</style>
+
+<div class="mq-band" role="note">
+  <span>Maqueta · datos de ejemplo · <label><input type="checkbox" id="notas" checked> Mostrar anotaciones</label></span>
+  <nav aria-label="Vistas de la maqueta">
+    <a href="#inicio">1 · Inicio</a>
+    <a href="#servicio">2 · Servicio</a>
+    <a href="#propuesta">3 · Diagnóstico y propuesta</a>
+  </nav>
+</div>
+
+<div class="shell">
+  <aside class="side anot" data-n="A" id="side" aria-label="Navegación del panel">
+    <a class="brand" href="#inicio"><span class="brand-mark">P</span><span><b>Pasteko</b><small>Mantenimiento</small></span></a>
+    <button class="search-btn" data-cmdk type="button"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Buscar o ir a…<kbd>⌘K</kbd></button>
+
+    <div class="grp">
+      <a class="nav-a" href="#inicio" data-v="inicio"><svg class="i" viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Inicio<span class="cnt bad">5</span></a>
+    </div>
+    <div class="grp"><span class="grp-t">Operación</span>
+      <a class="nav-a" href="#servicio" data-v="servicio"><svg class="i" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>Servicio<span class="cnt bad">7</span></a>
+      <a class="nav-a" href="#inicio"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Preventivos<span class="cnt">3</span></a>
+      <a class="nav-a" href="#inicio"><svg class="i" viewBox="0 0 24 24"><path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-6h6v6"/></svg>Aperturas</a>
+    </div>
+    <div class="grp"><span class="grp-t">Inventario</span>
+      <a class="nav-a" href="#inicio"><svg class="i" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>Equipos<span class="cnt">12</span></a>
+      <a class="nav-a" href="#inicio"><svg class="i" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></svg>Refacciones<span class="cnt">2</span></a>
+      <a class="nav-a" href="#inicio"><svg class="i" viewBox="0 0 24 24"><path d="M12 21s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>Sucursales</a>
+    </div>
+    <div class="grp"><span class="grp-t">Dinero</span>
+      <a class="nav-a" href="#inicio"><svg class="i" viewBox="0 0 24 24"><path d="M3 7h18v12H3z"/><circle cx="12" cy="13" r="3"/></svg>Gastos<span class="cnt">4</span></a>
+      <a class="nav-a" href="#inicio"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Caja chica</a>
+      <a class="nav-a" href="#inicio"><svg class="i" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></svg>Reportes</a>
+    </div>
+    <div class="grp"><span class="grp-t">Ajustes</span>
+      <a class="nav-a" href="#inicio"><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M17 11a3 3 0 1 0 0-6M22 21a6 6 0 0 0-4-5.6"/></svg>Personas y proveedores</a>
+      <a class="nav-a" href="#inicio"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="m10 9 5 2.5-5 2.5z"/></svg>Contenido de tiendas</a>
+    </div>
+
+    <div class="side-foot"><span class="avatar">AR</span><span><b>Administración</b><small>Ver como técnico</small></span><a href="#inicio">Salir</a></div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="btn ghost sm mtop" id="abrirMenu" type="button" aria-label="Abrir menú"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <div class="crumbs" id="crumbs"></div>
+      <div class="top-r">
+        <div class="periodo anot hide-m" data-n="B" aria-label="Periodo"><button type="button" aria-label="Mes anterior">‹</button><span>Noviembre 2026</span><button type="button" aria-label="Mes siguiente" disabled>›</button></div>
+        <button class="btn ghost sm mtop" data-cmdk type="button" aria-label="Buscar"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+        <button class="btn ghost sm bell hide-m" type="button" aria-label="Avisos, 3 sin leer"><svg class="i" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4"/></svg><i></i></button>
+        <div class="menu anot" data-n="C">
+          <button class="btn primary sm" id="crearBtn" type="button" aria-expanded="false" aria-haspopup="true">+ Nuevo</button>
+          <div class="menu-pop" id="crearPop" hidden>
+            <a href="#servicio"><span>Hoja de servicio<small>Registrar trabajo de un técnico</small></span></a>
+            <a href="#inicio"><span>Gasto<small>Factura o pago a proveedor</small></span></a>
+            <a href="#inicio"><span>Movimiento de caja chica</span></a>
+            <a href="#inicio"><span>Preventivo<small>Programar mantenimiento</small></span></a>
+            <a href="#inicio"><span>Apertura de sucursal</span></a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= INICIO ================= -->
+    <section class="canvas" data-view="inicio" hidden>
+      <div class="page-head">
+        <div>
+          <p class="eyebrow">Domingo 22 de noviembre · corte al día 22</p>
+          <h1>Buenas noches. Tienes 5 pendientes hoy.</h1>
+          <p>Gastaste <b class="num">$184,320</b> y cerrarías el mes en <b class="num" style="color:var(--bad)">$251,300</b>, 5% sobre el presupuesto.</p>
+        </div>
+      </div>
+
+      <div class="kpis anot" data-n="D">
+        <a class="kpi" href="#inicio"><span>Gasto del mes</span><b class="num">$184,320</b><small><span class="d-up">▲ 12%</span> proyectado vs octubre</small></a>
+        <a class="kpi" href="#inicio"><span>Presupuesto disponible</span><b class="num">$55,680</b><div class="bar"><i style="width:77%"></i></div><small>77% usado · mes al 73%</small></a>
+        <a class="kpi" href="#servicio"><span>Reportes abiertos</span><b class="num">7</b><small><span class="d-up">2 urgentes</span> · 3 sin asignar</small></a>
+        <a class="kpi" href="#inicio"><span>Preventivo cumplido</span><b class="num">18 de 24</b><small><span class="d-dn">▲ 8 pts</span> · 3 vencidos</small></a>
+      </div>
+
+      <div class="inbox">
+        <section class="card anot" data-n="E" aria-labelledby="hoy-t">
+          <header><div><h3 id="hoy-t">Requiere tu atención</h3><p>Ordenado por impacto: primero lo que detiene la venta.</p></div><span class="pill bad" id="pend">5 pendientes</span></header>
+          <div class="tasks" id="tasks">
+            <div class="task"><span class="sev bad"></span><div><b>Horno rápido sin calentar · Plaza Norte</b><small>Reporte T-0412 · hace 7 h · no pueden vender · meta 6 h vencida</small></div><div class="acc"><button class="btn sm primary" data-done>Asignar técnico</button><a class="btn sm" href="#servicio">Ver</a></div></div>
+            <div class="task"><span class="sev bad"></span><div><b>Refresquero gotea · Centro Histórico</b><small>Reporte T-0415 · hace 2 h · urgente · sin asignar</small></div><div class="acc"><button class="btn sm primary" data-done>Asignar técnico</button><a class="btn sm" href="#servicio">Ver</a></div></div>
+            <div class="task"><span class="sev bad"></span><div><b>3 preventivos vencidos</b><small>Hornos de Zona Sur · el más antiguo vence hace 9 días</small></div><div class="acc"><button class="btn sm" data-done>Reprogramar</button></div></div>
+            <div class="task"><span class="sev warn"></span><div><b>4 hojas de servicio por revisar</b><small>Enviadas por técnicos · suman $12,480</small></div><div class="acc"><button class="btn sm" data-done>Revisar</button></div></div>
+            <div class="task"><span class="sev warn"></span><div><b>Caja chica al 11%</b><small>Quedan $1,650 de $15,000 · 2 tickets sin factura</small></div><div class="acc"><button class="btn sm" data-done>Reponer</button></div></div>
+          </div>
+          <div class="calm" id="calm" hidden><svg class="i" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg>Todo en orden. No hay nada urgente por ahora.</div>
+        </section>
+
+        <section class="card" aria-labelledby="sem-t">
+          <header><div><h3 id="sem-t">Para esta semana</h3><p>No es urgente, pero tiene fecha.</p></div></header>
+          <div class="later">
+            <a href="#inicio"><span>Garantías que vencen en 60 días</span><span class="pill warn num">6</span></a>
+            <a href="#inicio"><span>Pagos pendientes a proveedores</span><span class="num">$38,900</span></a>
+            <a href="#inicio"><span>Refacciones bajo el mínimo</span><span class="pill warn num">2</span></a>
+            <a href="#inicio"><span>Equipos para evaluar reemplazo</span><span class="pill neutral num">3</span></a>
+            <a href="#inicio"><span>Censo por validar</span><span class="pill neutral num">12</span></a>
+          </div>
+        </section>
+      </div>
+
+      <section class="anot" data-n="F" aria-label="Análisis del mes">
+        <div class="tabs" role="tablist">
+          <button role="tab" aria-selected="true" data-tab="dinero">Dinero</button>
+          <button role="tab" aria-selected="false" data-tab="equipos">Equipos y fallas</button>
+          <button role="tab" aria-selected="false" data-tab="sucursales">Sucursales</button>
+        </div>
+        <div class="analisis" data-panel="dinero" style="margin-top:16px">
+          <div class="card chart">
+            <header><div><h3>Gasto mensual contra presupuesto</h3><p>Últimos 6 meses · noviembre parcial</p></div><a class="more" href="#inicio">Ver reporte →</a></header>
+            <svg viewBox="0 0 520 200" role="img" aria-label="Gasto mensual de junio a noviembre">
+              <g stroke="var(--line)" stroke-width="1"><line x1="40" y1="20" x2="510" y2="20"/><line x1="40" y1="80" x2="510" y2="80"/><line x1="40" y1="140" x2="510" y2="140"/><line x1="40" y1="170" x2="510" y2="170"/></g>
+              <text x="34" y="24" text-anchor="end">$300k</text><text x="34" y="84" text-anchor="end">$200k</text><text x="34" y="144" text-anchor="end">$100k</text><text x="34" y="174" text-anchor="end">$50k</text>
+              <line x1="40" y1="44" x2="510" y2="44" stroke="var(--bad)" stroke-dasharray="5 4" stroke-width="1.5"/><text x="508" y="38" text-anchor="end" style="fill:var(--bad)">presupuesto $240k</text>
+              <g fill="var(--ink)">
+                <rect x="60" y="68" width="48" height="132" rx="4" style="fill:var(--muted)"/>
+                <rect x="138" y="84" width="48" height="116" rx="4" style="fill:var(--muted)"/>
+                <rect x="216" y="56" width="48" height="144" rx="4" style="fill:var(--muted)"/>
+                <rect x="294" y="74" width="48" height="126" rx="4" style="fill:var(--muted)"/>
+                <rect x="372" y="62" width="48" height="138" rx="4" style="fill:var(--muted)"/>
+                <rect x="450" y="90" width="48" height="110" rx="4" style="fill:var(--orange)"/>
+                <rect x="450" y="34" width="48" height="56" rx="4" fill="none" style="stroke:var(--orange)" stroke-dasharray="4 3" stroke-width="1.5"/>
+              </g>
+            </svg>
+            <div style="display:flex;justify-content:space-between;padding:0 4% 0 10%;font-family:var(--f-mono);font-size:11px;color:var(--muted)"><span>jun</span><span>jul</span><span>ago</span><span>sep</span><span>oct</span><span style="color:var(--ink);font-weight:600">nov</span></div>
+          </div>
+          <div class="card">
+            <header><div><h3>¿En qué se va el dinero?</h3><p>Noviembre · por categoría</p></div></header>
+            <ul class="rank">
+              <li><span>Refrigeración</span><b class="num">$62,100</b><span class="rb"><i style="width:100%"></i></span></li>
+              <li><span>Hornos</span><b class="num">$48,300</b><span class="rb"><i style="width:78%"></i></span></li>
+              <li><span>Plomería</span><b class="num">$27,400</b><span class="rb"><i style="width:44%"></i></span></li>
+              <li><span>Eléctrico</span><b class="num">$21,950</b><span class="rb"><i style="width:35%"></i></span></li>
+              <li><span>Otros</span><b class="num">$24,570</b><span class="rb"><i style="width:40%"></i></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="analisis" data-panel="equipos" style="margin-top:16px" hidden>
+          <div class="card">
+            <header><div><h3>Equipos que más fallan</h3><p>Correctivos · últimos 90 días</p></div><a class="more" href="#inicio">Ver equipos →</a></header>
+            <ul class="rank">
+              <li><span>Horno rápido · 9 tiendas</span><b class="num">14</b><span class="rb"><i style="width:100%;background:var(--magenta)"></i></span></li>
+              <li><span>Refresquero · 6 tiendas</span><b class="num">9</b><span class="rb"><i style="width:64%;background:var(--magenta)"></i></span></li>
+              <li><span>Máquina de hielos · 4 tiendas</span><b class="num">6</b><span class="rb"><i style="width:43%;background:var(--magenta)"></i></span></li>
+              <li><span>Cafetera · 3 tiendas</span><b class="num">4</b><span class="rb"><i style="width:29%;background:var(--magenta)"></i></span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <header><div><h3>Reparar o reemplazar</h3><p>Gastado contra costo del equipo</p></div></header>
+            <div class="err"><svg class="i" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><span><b>No se pudo cargar el historial de equipos.</b>Esto no significa que no haya datos. <a href="#inicio">Reintentar</a></span></div>
+          </div>
+        </div>
+        <div class="analisis" data-panel="sucursales" style="margin-top:16px" hidden>
+          <div class="card" style="grid-column:1/-1">
+            <header><div><h3>Sucursales del mes</h3><p>Gasto y fallas por tienda · noviembre</p></div><a class="more" href="#inicio">Ver mapa →</a></header>
+            <ul class="rank">
+              <li><span>Plaza Norte · Zona Norte · 4 fallas</span><b class="num">$21,400</b><span class="rb"><i style="width:100%"></i></span></li>
+              <li><span>Centro Histórico · Zona Centro · 3 fallas</span><b class="num">$17,800</b><span class="rb"><i style="width:83%"></i></span></li>
+              <li><span>Galerías Sur · Zona Sur · 2 fallas</span><b class="num">$12,950</b><span class="rb"><i style="width:60%"></i></span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <!-- ================= SERVICIO ================= -->
+    <section class="canvas" data-view="servicio" hidden>
+      <div class="page-head">
+        <div><p class="eyebrow">Operación</p><h1>Servicio</h1><p>Reporte de tienda → técnico asignado → hoja de servicio → revisión. Un solo flujo, una sola lista.</p></div>
+        <button class="btn primary" type="button">+ Hoja de servicio</button>
+      </div>
+      <div class="filters anot" data-n="G">
+        <button class="chip" aria-pressed="true">Abiertos · 7</button>
+        <button class="chip" aria-pressed="false">Sin asignar · 3</button>
+        <button class="chip" aria-pressed="false">Por revisar · 4</button>
+        <button class="chip" aria-pressed="false">Cerrados</button>
+        <input id="buscarServ" type="search" placeholder="Buscar sucursal, equipo o folio">
+      </div>
+      <div class="split">
+        <div class="list anot" data-n="H" id="lista">
+          <button class="row" aria-current="true"><span class="sev bad"></span><span><span class="l1"><span class="num">T-0412</span><span class="pill bad">Urgente</span><span class="pill neutral">Sin asignar</span></span><b>Plaza Norte · Horno rápido</b><small>No calienta · no pueden vender · 📷 2</small></span><span class="t bad">7 h</span></button>
+          <button class="row"><span class="sev bad"></span><span><span class="l1"><span class="num">T-0415</span><span class="pill bad">Urgente</span><span class="pill neutral">Sin asignar</span></span><b>Centro Histórico · Refresquero</b><small>Gotea agua por abajo · pueden vender</small></span><span class="t">2 h</span></button>
+          <button class="row"><span class="sev warn"></span><span><span class="l1"><span class="num">T-0409</span><span class="pill warn">Media</span><span class="pill ok">En proceso</span></span><b>Galerías Sur · Máquina de hielos</b><small>Hace poco hielo · Técnico: Luis M.</small></span><span class="t">19 h</span></button>
+          <button class="row"><span class="sev neutral"></span><span><span class="l1"><span class="num">H-1188</span><span class="pill warn">Por revisar</span></span><b>Lomas · Cafetera</b><small>Hoja de servicio · $2,340 · Técnico: Ana R.</small></span><span class="t">1 d</span></button>
+          <button class="row"><span class="sev neutral"></span><span><span class="l1"><span class="num">T-0401</span><span class="pill neutral">Baja</span><span class="pill neutral">Asignado</span></span><b>Plaza Oriente · Frigobar</b><small>Ruido al encender · Técnico: Luis M.</small></span><span class="t">2 d</span></button>
+        </div>
+        <aside class="detail card anot" data-n="I" aria-label="Detalle del reporte">
+          <header style="margin:0"><div><p class="eyebrow num">T-0412 · hace 7 h</p><h3 style="font-size:20px">Plaza Norte · Horno rápido</h3></div><span class="pill bad">Meta 6 h vencida</span></header>
+          <ol class="steps"><li class="done">Reportado</li><li class="now">Asignar</li><li>En proceso</li><li>Hoja</li><li>Cerrado</li></ol>
+          <dl class="kv">
+            <dt>Síntoma</dt><dd>No calienta, marca error E4</dd>
+            <dt>¿Pueden vender?</dt><dd style="color:var(--bad)">No</dd>
+            <dt>Equipo</dt><dd><a href="#inicio">HR-NOR-02</a> · en garantía hasta mar 2027</dd>
+            <dt>Historial</dt><dd>3 fallas en 90 días · $8,900 gastados</dd>
+          </dl>
+          <div class="err" style="background:var(--brand-soft);color:var(--brand)"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg><span>Equipo en garantía: llama al proveedor antes de pagar una reparación.</span></div>
+          <div class="actbar"><button class="btn primary" type="button">Asignar técnico</button><button class="btn" type="button">Llamar a garantía</button><button class="btn ghost" type="button">Cambiar prioridad</button></div>
+          <ol class="timeline">
+            <li><span class="num">15:12</span><span>La tienda reportó desde el QR, con 2 fotos.</span></li>
+            <li><span class="num">15:12</span><span>Aviso enviado a administración.</span></li>
+          </ol>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= PROPUESTA ================= -->
+    <section class="canvas" data-view="propuesta" hidden>
+      <div class="page-head"><div><p class="eyebrow">Diagnóstico del panel admin actual</p><h1>De 12 pestañas a un panel que te dice qué hacer</h1><p>Lo que encontré en el código actual y cómo lo resuelve cada parte de la maqueta. Las letras corresponden a las anotaciones punteadas en las vistas 1 y 2.</p></div></div>
+
+      <div class="cmp">
+        <div class="card"><header><div><h3>Hoy · AdminTabs.tsx</h3><p>12 destinos al mismo nivel, en una fila con scroll horizontal oculto</p></div><span class="pill bad">Antes</span></header>
+          <div class="tabs-old"><span>Resumen</span><span>Servicio</span><span>Preventivos</span><span>Gastos</span><span>Equipos</span><span>Caja chica</span><span>Refacciones</span><span>Sucursales</span><span>Usuarios</span><span style="background:var(--bad-soft);color:var(--bad)">Aperturas ↗ sale del panel</span><span>Reporte</span><span>Contenido de tiendas</span></div>
+          <p style="font-size:14px;color:var(--muted);margin:12px 0 0">En móvil solo se ven 3 o 4; no hay señal de que hay más. Ninguna pestaña muestra cuántos pendientes tiene.</p>
+        </div>
+        <div class="card"><header><div><h3>Propuesta · barra lateral agrupada</h3><p>Mismos módulos, ordenados por el trabajo que haces</p></div><span class="pill ok">Después</span></header>
+          <div class="ia">
+            <div><b>Inicio</b><ul><li>Bandeja de pendientes</li></ul></div>
+            <div><b>Operación</b><ul><li>Servicio</li><li>Preventivos</li><li>Aperturas</li></ul></div>
+            <div><b>Inventario</b><ul><li>Equipos</li><li>Refacciones</li><li>Sucursales</li></ul></div>
+            <div><b>Dinero</b><ul><li>Gastos</li><li>Caja chica</li><li>Reportes</li></ul></div>
+            <div><b>Ajustes</b><ul><li>Personas y proveedores</li><li>Contenido de tiendas</li></ul></div>
+          </div>
+        </div>
+      </div>
+
+      <h2 style="font-size:20px">Hallazgos y cómo los resuelve la maqueta</h2>
+      <div class="hall">
+        <div class="card"><h3><span class="num">A</span>Navegación plana y sin estado</h3><p>12 módulos pares, sin agrupar ni contar pendientes. Aperturas lleva a otro layout con otra barra y un enlace "← Panel".</p><p class="fix"><b>Cambio:</b> barra lateral con 5 grupos, contadores por módulo (magenta = urgente) y Aperturas dentro del mismo shell. En móvil, barra inferior con 4 accesos + "Más".</p></div>
+        <div class="card"><h3><span class="num">B</span>El periodo vive solo en el Resumen</h3><p>El selector de mes está en el hero del dashboard; Gastos, Caja y Reporte tienen su propio control o ninguno.</p><p class="fix"><b>Cambio:</b> un selector de periodo global en la barra superior que viaja con el usuario entre módulos (<span class="num">?mes=</span> compartido).</p></div>
+        <div class="card"><h3><span class="num">C</span>Crear algo exige saber dónde vive</h3><p>Para registrar un gasto o un preventivo hay que entrar al módulo y encontrar el formulario.</p><p class="fix"><b>Cambio:</b> botón "+ Nuevo" siempre visible y búsqueda ⌘K para saltar a módulos, sucursales, equipos o folios.</p></div>
+        <div class="card"><h3><span class="num">D</span>Hero oscuro + 4 KPIs + 10 paneles compiten</h3><p>La crítica previa del Resumen le dio 22/40: todo tiene el mismo peso y la siguiente acción no es obvia.</p><p class="fix"><b>Cambio:</b> el titular resume el mes en una frase; 4 KPIs compactos y clicables que llevan al módulo filtrado.</p></div>
+        <div class="card"><h3><span class="num">E</span>Las alertas son chips sin acción</h3><p>12 tipos de alerta en una fila de chips; si no hay ninguna, el bloque desaparece sin decir "todo bien".</p><p class="fix"><b>Cambio:</b> bandeja ordenada por impacto (lo que detiene la venta primero), con acción directa en cada fila y estado "Todo en orden". Lo no urgente baja a "Para esta semana".</p></div>
+        <div class="card"><h3><span class="num">F</span>Análisis siempre desplegado</h3><p>Gráficas de gasto, zonas, categorías, proveedores, fallas y reemplazos ocupan toda la página a la vez.</p><p class="fix"><b>Cambio:</b> análisis en 3 pestañas (Dinero, Equipos, Sucursales). Un error de consulta se muestra como error, no como "sin datos".</p></div>
+        <div class="card"><h3><span class="num">G</span>Servicio dividido en dos listas</h3><p>Reportes de tiendas y hojas de servicio son pestañas separadas aunque son el mismo ciclo.</p><p class="fix"><b>Cambio:</b> una lista con filtros por etapa: abiertos, sin asignar, por revisar, cerrados.</p></div>
+        <div class="card"><h3><span class="num">H · I</span>Ir y volver para cada reporte</h3><p>Cada reporte abre una página nueva; para revisar 5 hay que ir y volver 5 veces.</p><p class="fix"><b>Cambio:</b> lista + panel de detalle. El detalle muestra la etapa, la garantía y el historial del equipo, y la acción siguiente como botón principal.</p></div>
+      </div>
+
+      <h2 style="font-size:20px">Cómo lo implementaría (por fases)</h2>
+      <ol class="road">
+        <li><b>Fase 1 · Shell y navegación</b><ul><li>Nuevo <span class="num">AdminShell</span> en <span class="num">app/admin/layout.tsx</span> con barra lateral y barra inferior móvil</li><li>Contadores con una consulta ligera compartida</li><li>Mover Aperturas bajo el mismo shell</li><li>Eliminar <span class="num">AdminTabs</span></li></ul></li>
+        <li><b>Fase 2 · Inicio como bandeja</b><ul><li>Reordenar <span class="num">app/admin/page.tsx</span>: titular, KPIs, bandeja, análisis en pestañas</li><li>Prioridad de alertas y estado "Todo en orden"</li><li>Estados de error por consulta</li></ul></li>
+        <li><b>Fase 3 · Productividad</b><ul><li>Periodo global en la URL</li><li>"+ Nuevo" y búsqueda ⌘K</li><li>Servicio unificado con panel de detalle</li><li>Aplicar el patrón lista + detalle a Gastos y Equipos</li></ul></li>
+      </ol>
+    </section>
+  </div>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+
+<nav class="bnav" aria-label="Navegación móvil">
+  <a href="#inicio" data-v="inicio"><svg class="i" viewBox="0 0 24 24"><path d="M3 11 12 4l9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Inicio<span class="dot">5</span></a>
+  <a href="#servicio" data-v="servicio"><svg class="i" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>Servicio<span class="dot">7</span></a>
+  <a href="#inicio"><svg class="i" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>Equipos</a>
+  <a href="#inicio"><svg class="i" viewBox="0 0 24 24"><path d="M3 7h18v12H3z"/><circle cx="12" cy="13" r="3"/></svg>Gastos</a>
+  <button type="button" id="masBtn"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>Más</button>
+</nav>
+
+<div class="cmdk" id="cmdk" hidden>
+  <div class="cmdk-box" role="dialog" aria-label="Buscar o ir a">
+    <input id="cmdkIn" type="text" placeholder="Busca un módulo, sucursal, equipo o folio…" autocomplete="off">
+    <div class="cmdk-list" id="cmdkList"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const VISTAS = { inicio: ["Inicio"], servicio: ["Operación", "Servicio"], propuesta: ["Maqueta", "Diagnóstico y propuesta"] };
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+  function mostrar() {
+    let v = location.hash.slice(1);
+    if (!VISTAS[v]) v = "inicio";
+    $$("[data-view]").forEach((s) => (s.hidden = s.dataset.view !== v));
+    $$("[data-v]").forEach((a) => a.toggleAttribute("aria-current", a.dataset.v === v) || a.dataset.v === v && a.setAttribute("aria-current", "page"));
+    $$("[data-v]").forEach((a) => { if (a.dataset.v === v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+    $$(".mq-band a").forEach((a) => { if (a.getAttribute("href") === "#" + v) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current"); });
+    const c = VISTAS[v];
+    $("#crumbs").innerHTML = c.length > 1 ? `<span class="hide-m">${c[0]}</span><span class="hide-m">/</span><b>${c[1]}</b>` : `<b>${c[0]}</b>`;
+    cerrarMenu(); window.scrollTo(0, 0);
+  }
+  window.addEventListener("hashchange", mostrar); mostrar();
+
+  // Anotaciones
+  $("#notas").addEventListener("change", (e) => document.body.classList.toggle("sin-notas", !e.target.checked));
+
+  // Bandeja: marcar como resuelto
+  $$("#tasks [data-done]").forEach((b) => b.addEventListener("click", () => {
+    b.closest(".task").classList.add("hecho");
+    const n = $$("#tasks .task:not(.hecho)").length;
+    $("#pend").textContent = n ? `${n} pendiente${n > 1 ? "s" : ""}` : "Al día";
+    $("#pend").className = "pill " + (n ? "bad" : "ok");
+    if (!n) { $("#tasks").hidden = true; $("#calm").hidden = false; }
+  }));
+
+  // Pestañas de análisis
+  $$("[data-tab]").forEach((t) => t.addEventListener("click", () => {
+    $$("[data-tab]").forEach((x) => x.setAttribute("aria-selected", x === t));
+    $$("[data-panel]").forEach((p) => (p.hidden = p.dataset.panel !== t.dataset.tab));
+  }));
+
+  // Chips y lista de servicio
+  $$(".chip").forEach((c) => c.addEventListener("click", () => $$(".chip").forEach((x) => x.setAttribute("aria-pressed", x === c))));
+  $$("#lista .row").forEach((r) => r.addEventListener("click", () => $$("#lista .row").forEach((x) => x.setAttribute("aria-current", x === r))));
+
+  // Menú + Nuevo
+  const pop = $("#crearPop"), crear = $("#crearBtn");
+  function cerrarMenu() { pop.hidden = true; crear.setAttribute("aria-expanded", "false"); }
+  crear.addEventListener("click", (e) => { e.stopPropagation(); pop.hidden = !pop.hidden; crear.setAttribute("aria-expanded", String(!pop.hidden)); });
+  document.addEventListener("click", (e) => { if (!pop.contains(e.target)) cerrarMenu(); });
+
+  // Menú lateral móvil
+  const side = $("#side"), scrim = $("#scrim");
+  const abrir = () => { side.classList.add("open"); scrim.hidden = false; };
+  const cerrar = () => { side.classList.remove("open"); scrim.hidden = true; };
+  $("#abrirMenu").addEventListener("click", abrir); $("#masBtn").addEventListener("click", abrir);
+  scrim.addEventListener("click", cerrar); side.addEventListener("click", (e) => { if (e.target.closest("a")) cerrar(); });
+
+  // Búsqueda ⌘K
+  const ITEMS = [
+    ["Ir a", "Inicio", "#inicio", ""], ["Ir a", "Servicio", "#servicio", "7 abiertos"], ["Ir a", "Preventivos", "#inicio", "3 vencidos"],
+    ["Ir a", "Gastos", "#inicio", ""], ["Ir a", "Equipos", "#inicio", ""], ["Ir a", "Caja chica", "#inicio", ""], ["Ir a", "Aperturas", "#inicio", ""],
+    ["Crear", "Nueva hoja de servicio", "#servicio", ""], ["Crear", "Nuevo gasto", "#inicio", ""], ["Crear", "Programar preventivo", "#inicio", ""],
+    ["Sucursales", "Plaza Norte", "#inicio", "Zona Norte"], ["Sucursales", "Centro Histórico", "#inicio", "Zona Centro"],
+    ["Reportes", "T-0412 · Horno rápido", "#servicio", "Plaza Norte"], ["Equipos", "HR-NOR-02 · Horno rápido", "#inicio", "Plaza Norte"],
+  ];
+  const ck = $("#cmdk"), inp = $("#cmdkIn"), lst = $("#cmdkList"); let sel = 0, vis = [];
+  function pintar() {
+    const q = inp.value.trim().toLowerCase();
+    vis = ITEMS.filter((i) => !q || (i[1] + " " + i[3]).toLowerCase().includes(q));
+    sel = Math.min(sel, Math.max(vis.length - 1, 0));
+    let html = "", sec = "";
+    vis.forEach((it, k) => {
+      if (it[0] !== sec) { sec = it[0]; html += `<div class="cmdk-sec">${sec}</div>`; }
+      html += `<a class="cmdk-it${k === sel ? " sel" : ""}" href="${it[2]}">${it[1]}<small>${it[3]}</small></a>`;
+    });
+    lst.innerHTML = html || `<div class="cmdk-sec">Sin resultados para “${inp.value}”</div>`;
+  }
+  const abrirCk = () => { ck.hidden = false; inp.value = ""; sel = 0; pintar(); inp.focus(); };
+  const cerrarCk = () => { ck.hidden = true; };
+  $$("[data-cmdk]").forEach((b) => b.addEventListener("click", abrirCk));
+  inp.addEventListener("input", () => { sel = 0; pintar(); });
+  ck.addEventListener("click", (e) => { if (e.target === ck || e.target.closest(".cmdk-it")) cerrarCk(); });
+  document.addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); ck.hidden ? abrirCk() : cerrarCk(); }
+    if (ck.hidden) return;
+    if (e.key === "Escape") cerrarCk();
+    if (e.key === "ArrowDown") { sel = Math.min(sel + 1, vis.length - 1); pintar(); e.preventDefault(); }
+    if (e.key === "ArrowUp") { sel = Math.max(sel - 1, 0); pintar(); e.preventDefault(); }
+    if (e.key === "Enter" && vis[sel]) { location.hash = vis[sel][2]; cerrarCk(); }
+  });
+})();
+</script>

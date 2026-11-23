@@ -12,7 +12,7 @@ import type { Gasto, GastoV } from "@/lib/types";
 import { borrarGasto, guardarAjustes, marcarPagos, pasarAPago } from "../acciones-modulos";
 
 const ORIGEN: Record<string, [string, string]> = { hoja: ["Hoja de servicio", "neutral"], gasto: ["Gasto", "warn"], caja: ["Caja chica", "ok"] };
-type F = { mes?: string; zona?: string; pago?: string; ok?: string; error?: string };
+type F = { mes?: string; zona?: string; pago?: string; sel?: string; ok?: string; error?: string };
 type Fila = GastoV & { partes?: GastoV[] };
 
 /** Junta en un solo renglón los conceptos que vienen de la misma factura (se pagan juntos). */
@@ -114,6 +114,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
     "\n\nDetalle:\n" +
     pendientes.map((x) => `${fCorta(x.fecha)} | ${x.sucursal ?? "General"} | ${x.concepto} | ${x.beneficiario ?? "—"} | ${mxn(Number(x.monto))} | ${diasEntre(x.fecha, h)} días | ${x.solicitado_pago ? `en trámite desde ${fCorta(x.solicitado_pago)}` : "por pasar a pago"}` +
       (x.partes ? x.partes.map((p) => `\n    · ${p.categoria}: ${p.concepto.split(" · ")[0]} ${mxn(Number(p.monto))}`).join("") : "")).join("\n");
+  const seleccion = f.sel ? delMes.find((x) => `${x.origen}:${x.ref}` === f.sel) ?? null : null;
   const volver = `/admin/gastos?mes=${mes}${f.zona ? `&zona=${encodeURIComponent(f.zona)}` : ""}${f.pago ? `&pago=${f.pago}` : ""}`;
 
   const okMsg = f.ok === "1" ? "Gasto registrado." : f.ok?.startsWith("partidas-") ? `Factura registrada como ${f.ok.slice(9)} gastos, uno por concepto.` : f.ok === "pendiente" ? "Concepto regresado a pendiente de pago." : f.ok?.startsWith("pagados-") ? `${f.ok.slice(8)} concepto(s) marcados como pagados.` : f.ok?.startsWith("pasadas-") ? `${f.ok.slice(8)} concepto(s) pasados a pago. Sus PDF y XML se borraron.` : f.ok === "regresadas" ? "Regresadas a «por pasar a pago»." : null;
@@ -132,7 +133,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
       {f.error && <div className="note bad" style={{ marginBottom: 14 }}>{f.error}</div>}
 
       <div className="panel-grid" style={{ marginBottom: 16 }}>
-        <section className="card">
+        <section className="card" id="nuevo" style={{ scrollMarginTop: 80 }}>
           <h3>Registrar gasto</h3>
           <p className="sub">Con el XML de la factura. Las hojas de servicio y la caja chica se suman solas.</p>
           <RegistroCfdi
@@ -261,28 +262,29 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
       </div>
 
       {filas.length ? (
+        <div className={`lst${seleccion ? " con-panel" : ""}`} id="lista">
         <div className="tbl-wrap">
-          <table>
-            <thead><tr><th>Fecha</th><th>Origen</th><th>Sucursal</th><th>Categoría</th><th>Concepto</th><th className="r">Monto</th><th>Pago</th><th /></tr></thead>
+          <table className="tbl-sel">
+            <thead><tr><th>Fecha</th><th className="ocultable">Origen</th><th>Sucursal</th><th className="ocultable">Categoría</th><th>Concepto</th><th className="r">Monto</th><th className="ocultable">Pago</th><th className="ocultable" /></tr></thead>
             <tbody>
               {filas.map((x) => {
                 const [o, oc] = ORIGEN[x.origen] ?? ["", "neutral"];
                 const fac = x.origen === "gasto" ? facturas.get(x.ref) : null;
                 const nFac = x.factura_uuid ? hermanos.get(x.factura_uuid) ?? 1 : 1;
                 return (
-                  <tr key={x.origen + x.ref}>
+                  <tr key={x.origen + x.ref} aria-selected={f.sel === `${x.origen}:${x.ref}`}>
                     <td className="num nw">{fCorta(x.fecha).replace(/ \d{2}$/, "")}</td>
-                    <td><span className={`pill ${oc}`}>{o}</span></td>
+                    <td className="ocultable"><span className={`pill ${oc}`}>{o}</span></td>
                     <td>{x.sucursal ?? <span style={{ color: "var(--muted)" }}>General</span>}</td>
-                    <td>{x.categoria}<br /><small style={{ color: "var(--muted)" }}>{x.tipo}</small></td>
-                    <td>{x.origen === "hoja" ? <Link href={`/admin/hojas/${x.ref}`}>{x.concepto}</Link> : x.concepto}{x.beneficiario && x.origen !== "caja" && <><br /><small style={{ color: "var(--muted)" }}>{x.beneficiario}</small></>}{nFac > 1 && <><br /><span className="fac-tag" title="Se paga y se borra junto con los demás conceptos de la factura">{x.factura_ref} · {nFac} conceptos · total {mxn(Number(x.factura_total ?? 0))}</span></>}</td>
+                    <td className="ocultable">{x.categoria}<br /><small style={{ color: "var(--muted)" }}>{x.tipo}</small></td>
+                    <td><Link href={`${volver}&sel=${x.origen}:${x.ref}#lista`} scroll={false} title="Ver detalle">{x.concepto}</Link>{x.beneficiario && x.origen !== "caja" && <><br /><small style={{ color: "var(--muted)" }}>{x.beneficiario}</small></>}{nFac > 1 && <><br /><span className="fac-tag" title="Se paga y se borra junto con los demás conceptos de la factura">{x.factura_ref} · {nFac} conceptos · total {mxn(Number(x.factura_total ?? 0))}</span></>}</td>
                     <td className="r num">{mxn(Number(x.monto))}</td>
-                    <td>
+                    <td className="ocultable">
                       {x.pagado ? (
                         <><span className="pill ok">Pagado</span>{x.fecha_pago && <><br /><small style={{ color: "var(--muted)" }}>{fCorta(x.fecha_pago)}{x.referencia_pago ? ` · ${x.referencia_pago}` : ""}</small></>}</>
                       ) : <span className="pill warn">Pendiente</span>}
                     </td>
-                    <td className="r">
+                    <td className="r ocultable">
                       <div className="iacts">
                         {x.origen !== "caja" && (
                           <form action={marcarPagos}>
@@ -312,6 +314,15 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
               })}
             </tbody>
           </table>
+        </div>
+        {seleccion && (
+          <PanelGasto
+            x={seleccion}
+            conceptos={seleccion.factura_uuid ? delMes.filter((y) => y.factura_uuid === seleccion.factura_uuid) : []}
+            factura={seleccion.origen === "gasto" ? urls.get(facturas.get(seleccion.ref) ?? "") ?? null : null}
+            volver={volver}
+          />
+        )}
         </div>
       ) : (
         <div className="card"><h3>Sin gastos en {nombreMes(mes)}{f.pago ? ` con estado ${f.pago.toLowerCase()}` : ""}</h3><p className="sub">Registra el primero arriba o espera a que los técnicos envíen hojas con costo.</p></div>
@@ -370,5 +381,74 @@ function TablaPend({ lista, hoy: h, archivosDe, tramite }: { lista: Fila[]; hoy:
         </tbody>
       </table>
     </div>
+  );
+}
+
+/** Detalle de un gasto junto a la lista: de dónde viene, a quién se le paga, su factura y en qué va el pago. */
+function PanelGasto({ x, conceptos, factura, volver }: { x: GastoV; conceptos: GastoV[]; factura: string | null; volver: string }) {
+  const [o, oc] = ORIGEN[x.origen] ?? ["", "neutral"];
+  const n = Math.max(conceptos.length, 1);
+  return (
+    <aside className="lp card" aria-label="Detalle del gasto">
+      <header className="tkp-cab">
+        <div className="tkp-cab-t">
+          <div className="tkb-l1">
+            <span className={`pill ${oc}`}>{o}</span>
+            {x.pagado ? <span className="pill ok">Pagado</span> : x.solicitado_pago ? <span className="pill warn">En trámite</span> : <span className="pill warn">Pendiente</span>}
+          </div>
+          <h2>{x.concepto}</h2>
+          <p>{x.sucursal ?? "General"}{x.zona ? ` · ${x.zona}` : ""}</p>
+        </div>
+        <Link href={`${volver}#lista`} className="tkp-x" scroll={false} aria-label="Cerrar detalle">×</Link>
+      </header>
+
+      <div className="lp-gauge">
+        <div className="lp-gauge-t"><b className="num">{mxn(Number(x.monto))}</b><span>{fCorta(x.fecha)}</span></div>
+      </div>
+
+      <dl className="tkd-datos">
+        <div><dt>Categoría</dt><dd>{x.categoria}</dd></div>
+        <div><dt>Tipo</dt><dd>{x.tipo}</dd></div>
+        <div><dt>{x.origen === "caja" ? "Origen" : "Proveedor o técnico"}</dt><dd>{x.origen === "caja" ? "Caja chica" : x.beneficiario ?? "—"}</dd></div>
+        <div><dt>Equipo</dt><dd>{x.activo_id ? <Link className="num" href={`/admin/activos?sel=${encodeURIComponent(x.activo_id)}`}>{x.activo_id}</Link> : "Sin equipo ligado"}</dd></div>
+        <div><dt>Pago</dt><dd>{x.pagado ? `${fCorta(x.fecha_pago)}${x.referencia_pago ? ` · ${x.referencia_pago}` : ""}` : x.solicitado_pago ? `Entregado a Tesorería el ${fCorta(x.solicitado_pago)}` : "Por pasar a pago"}</dd></div>
+        {x.factura_ref && <div><dt>Factura</dt><dd className="num">{x.factura_ref}</dd></div>}
+      </dl>
+
+      {conceptos.length > 1 && (
+        <section className="lp-sec">
+          <h3>Conceptos de la misma factura · total {mxn(Number(x.factura_total ?? 0))}</h3>
+          <ul className="lp-lista">
+            {conceptos.map((c) => <li key={c.ref}><span>{c.categoria} · {c.concepto.split(" · ")[0]}</span><b className="num">{mxn(Number(c.monto))}</b></li>)}
+          </ul>
+          <p className="sub" style={{ margin: 0 }}>Se pagan y se borran juntos.</p>
+        </section>
+      )}
+
+      <div className="tkp-acc">
+        {x.origen === "hoja" && <Link className="btn small" href={`/admin/hojas/${x.ref}`}>Ver hoja de servicio</Link>}
+        {factura && <a className="btn small" href={factura} target="_blank" rel="noopener noreferrer">Ver factura</a>}
+        {x.origen !== "caja" && (
+          <form action={marcarPagos}>
+            <input type="hidden" name="volver" value={`${volver}&sel=${x.origen}:${x.ref}`} />
+            <input type="hidden" name="sel" value={`${x.origen}:${x.ref}`} />
+            <input type="hidden" name="pagado" value={String(!x.pagado)} />
+            <button className={`btn small${x.pagado ? "" : " primary"}`} type="submit">
+              {x.pagado ? (n > 1 ? `Regresar factura a pendiente (${n})` : "Regresar a pendiente") : n > 1 ? `Marcar factura pagada hoy (${n})` : "Marcar pagado hoy"}
+            </button>
+          </form>
+        )}
+        {x.origen === "caja" && <Link className="btn small" href="/admin/caja">Ver caja chica</Link>}
+      </div>
+      {x.origen === "gasto" && (
+        <form action={borrarGasto} className="lp-borrar">
+          <input type="hidden" name="id" value={x.ref} />
+          <BotonIcono icono="borrar" tono="danger" cuenta={n}
+            texto={n > 1 ? `Borrar factura (${n} conceptos)` : "Borrar gasto"}
+            confirmar={n > 1 ? `¿Borrar la factura completa (${n} conceptos)? No se puede deshacer.` : "¿Borrar este gasto? No se puede deshacer."} />
+          <span>{n > 1 ? `Borrar la factura completa (${n} conceptos)` : "Borrar este gasto"}</span>
+        </form>
+      )}
+    </aside>
   );
 }

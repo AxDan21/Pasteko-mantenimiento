@@ -50,10 +50,6 @@ export default async function CajaChica({ searchParams }: { searchParams: Promis
           <p className="eyebrow">Panel de mantenimiento · {nombreMes(mes)}</p>
           <h1 className="page-h">Caja chica</h1>
         </div>
-        <form method="get" className="toolbar" style={{ margin: 0 }}>
-          <label className="field">Mes<input id="f-mes" name="mes" type="month" defaultValue={mes} /></label>
-          <button className="btn" type="submit">Ver</button>
-        </form>
       </div>
 
       {f.ok && <div className="note ok" style={{ marginBottom: 14 }}>Movimiento registrado.</div>}
@@ -66,7 +62,7 @@ export default async function CajaChica({ searchParams }: { searchParams: Promis
         <div className="kpi"><span className="eyebrow">Sin factura</span><span className="v" style={{ color: sinF.length ? "var(--bad)" : "var(--ok)" }}>{sinF.length}</span><span className="s">{mxn(sinF.reduce((s, m) => s + Number(m.monto), 0))} por comprobar</span></div>
       </div>
 
-      <section className="card" style={{ marginBottom: 18 }}>
+      <section className="card" id="nuevo" style={{ marginBottom: 18, scrollMarginTop: 80 }}>
         <h3>Registrar factura</h3>
         <p className="sub">Suelta el XML y el PDF juntos: proveedor, conceptos, fecha y total se llenan solos. Solo elige la sucursal.</p>
         <CajaCfdi sucursales={(suc ?? []) as { id: number; nombre: string }[]} hoy={hoy()} saldo={saldo} />
