@@ -15,7 +15,7 @@ import { enlaces, leerAjustes } from "@/lib/datos";
 import { mxn } from "@/lib/format";
 import { CATEGORIAS_EXTRA, diasEntre, fCorta, hoy, mesValido, nombreMes, rangoFechas } from "@/lib/panel";
 import type { Gasto, GastoV } from "@/lib/types";
-import { borrarGasto, guardarAjustes, marcarPagos, pasarAPago } from "../acciones-modulos";
+import { borrarGasto, guardarAjustes, marcarPagos, pasarAPago, regresarAPorPasar } from "../acciones-modulos";
 
 const ORIGEN: Record<string, [string, string]> = { hoja: ["Hoja de servicio", "neutral"], gasto: ["Gasto", "warn"], caja: ["Caja chica", "ok"] };
 type F = { mes?: string; zona?: string; pago?: string; sel?: string; ok?: string; error?: string };
@@ -256,7 +256,7 @@ export default async function Gastos({ searchParams }: { searchParams: Promise<F
                 <label className="field">Fecha de pago<input id="p-fecha" name="fecha_pago" type="date" defaultValue={h} /></label>
                 <label className="field">Referencia<input id="p-ref" name="referencia_pago" placeholder="Transferencia, cheque…" /></label>
                 <button className="btn primary" type="submit">Marcar como pagadas</button>
-                <button className="btn" type="submit" formAction={pasarAPago} name="deshacer" value="1">Regresar a «por pasar»</button>
+                <button className="btn" type="submit" formAction={regresarAPorPasar}>Regresar a «por pasar»</button>
               </div>
             </form>
           </div>

@@ -445,8 +445,16 @@ export async function borrarRefaccion(f: FormData) {
  * Con "deshacer" regresan a "por pasar a pago" (los archivos ya no vuelven).
  */
 export async function pasarAPago(f: FormData) {
+  return moverAPago(f, false);
+}
+
+/** Etapa 2 → 1. Acción propia: React reemplaza el name de un botón con formAction, así que "deshacer" no llegaría. */
+export async function regresarAPorPasar(f: FormData) {
+  return moverAPago(f, true);
+}
+
+async function moverAPago(f: FormData, deshacer: boolean) {
   const supabase = await db();
-  const deshacer = txt(f, "deshacer") === "1";
   const fecha = deshacer ? null : txt(f, "fecha_solicitud") || new Date().toISOString().slice(0, 10);
   const sel = f.getAll("sel").map(String);
   const ids = (origen: string) => sel.filter((x) => x.startsWith(`${origen}:`)).map((x) => x.slice(origen.length + 1));
